@@ -7,12 +7,14 @@ namespace EFCore.ExprGenerator;
 
 internal record DtoProperty(
     string Name,
-    string TypeName,
     bool IsNullable,
     string OriginalExpression,
+    ITypeSymbol TypeSymbol,
     DtoStructure? NestedStructure
 )
 {
+    public string TypeName => TypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
     public static DtoProperty? AnalyzeExpression(
         string propertyName,
         ExpressionSyntax expression,
@@ -72,9 +74,9 @@ internal record DtoProperty(
 
         return new DtoProperty(
             Name: propertyName,
-            TypeName: propertyType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             IsNullable: isNullable || hasNullableAccess,
             OriginalExpression: expression.ToString(),
+            TypeSymbol: propertyType,
             NestedStructure: nestedStructure
         );
     }

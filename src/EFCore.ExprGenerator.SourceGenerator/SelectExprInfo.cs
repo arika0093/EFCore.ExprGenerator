@@ -23,50 +23,11 @@ internal abstract record SelectExprInfo
     public abstract string GetClassName(DtoStructure structure);
 
     // Generate DTO classes
-    public string GenerateDtoClasses(
+    public abstract string GenerateDtoClasses(
         DtoStructure structure,
         List<string> dtoClasses,
         string namespaceName
-    )
-    {
-        var dtoName = GetClassName(structure);
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"public class {dtoName}");
-        sb.AppendLine("{");
-
-        foreach (var prop in structure.Properties)
-        {
-            var propertyType = prop.TypeName;
-            // If propertyType is a generic type, use only the base type
-            if (propertyType.Contains("<"))
-            {
-                propertyType = propertyType[..propertyType.IndexOf("<")];
-            }
-
-            // For nested structures, recursively generate DTOs (add first)
-            if (prop.NestedStructure is not null)
-            {
-                var nestedId = prop.NestedStructure.GetUniqueId();
-                var nestedDtoName = GenerateDtoClasses(
-                    prop.NestedStructure,
-                    dtoClasses,
-                    namespaceName
-                );
-                // Since propertyType already has a fully qualified name starting with global::,
-                // add global:: to nestedDtoName as well
-                var nestedDtoFullName = $"global::{namespaceName}.{nestedDtoName}";
-                propertyType = $"{propertyType}<{nestedDtoFullName}>";
-            }
-            sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
-        }
-
-        sb.AppendLine("}");
-
-        // Add current DTO (nested DTOs are already added by recursive calls)
-        dtoClasses.Add(sb.ToString());
-        return dtoName;
-    }
+    );
 
     // Generate source code
     public void GenerateCode(SourceProductionContext context)
@@ -110,10 +71,13 @@ internal abstract record SelectExprInfo
         {
             // Output error information for debugging
             var errorMessage = $"""
-                // Source Generator Error: {ex.Message}
-                // Stack Trace: {ex.StackTrace}
+                /*
+                 * Source Generator Error: {ex.Message}
+                 * Stack Trace: {ex.StackTrace}
+                 */
                 """;
-            context.AddSource("GeneratorError.g.cs", errorMessage);
+            var hash = Guid.NewGuid().ToString("N").Substring(0, 8);
+            context.AddSource($"GeneratorError_{hash}.g.cs", errorMessage);
         }
     }
 
@@ -163,7 +127,6 @@ internal abstract record SelectExprInfo
                 /// <summary>
                 /// generated select expression method of {{dtoName}}
                 /// </summary>
-                [System.Runtime.CompilerServices.OverloadResolutionPriority(1)]
                 public static IQueryable<{{dtoName}}> SelectExpr<TResult>(
                     this IQueryable<{{sourceTypeFullName}}> query,
                     Func<{{sourceTypeFullName}}, TResult> selector)
@@ -176,7 +139,7 @@ internal abstract record SelectExprInfo
         var propertyAssignments = structure
             .Properties.Select(prop =>
             {
-                var assignment = GeneratePropertyAssignment(prop);
+                var assignment = GeneratePropertyAssignment(prop, 12);
                 return $"            {prop.Name} = {assignment}";
             })
             .ToList();
@@ -186,13 +149,13 @@ internal abstract record SelectExprInfo
         return sb.ToString();
     }
 
-    protected string GeneratePropertyAssignment(DtoProperty property)
+    protected string GeneratePropertyAssignment(DtoProperty property, int indents)
     {
         var expression = property.OriginalExpression;
         // For nested Select (collection) case
         if (property.NestedStructure is not null)
         {
-            var converted = ConvertNestedSelect(expression, property.NestedStructure);
+            var converted = ConvertNestedSelect(expression, property.NestedStructure, indents);
             // Debug: Check if conversion was performed correctly
             if (converted == expression && expression.Contains("Select"))
             {
@@ -204,14 +167,20 @@ internal abstract record SelectExprInfo
         // If nullable operator is used, convert to explicit null check
         if (property.IsNullable && expression.Contains("?."))
         {
-            return ConvertNullableAccessToExplicitCheck(expression);
+            var defaultValue = GetDefaultValueForType(property.TypeSymbol);
+            return ConvertNullableAccessToExplicitCheck(expression, defaultValue);
         }
         // Regular property access
         return expression;
     }
 
-    protected string ConvertNestedSelect(string expression, DtoStructure nestedStructure)
+    protected string ConvertNestedSelect(
+        string expression,
+        DtoStructure nestedStructure,
+        int indents
+    )
     {
+        var spaces = new string(' ', indents);
         // Example: s.Childs.Select(c => new { ... })
         // Extract parameter name (e.g., "c")
         // Consider the possibility of whitespace or generic type parameters after .Select
@@ -230,19 +199,23 @@ internal abstract record SelectExprInfo
             paramName = "x"; // Default parameter name
         var baseExpression = expression[..selectIndex];
         var nestedDtoName = GetClassName(nestedStructure);
+
         var propertyAssignments = new List<string>();
         foreach (var prop in nestedStructure.Properties)
         {
-            var assignment = GeneratePropertyAssignment(prop);
-            // For nested Select, convert to inline to avoid multi-line
-            assignment = assignment.Replace("\n", " ").Replace("\r", "");
-            propertyAssignments.Add($"{prop.Name} = {assignment}");
+            var assignment = GeneratePropertyAssignment(prop, indents + 4);
+            propertyAssignments.Add($"{spaces}    {prop.Name} = {assignment},");
         }
-        var propertiesCode = string.Join(", ", propertyAssignments);
-        return $"{baseExpression}.Select({paramName} => new {nestedDtoName} {{ {propertiesCode} }})";
+        var propertiesCode = string.Join("\n", propertyAssignments);
+        var code = $$"""
+            {{baseExpression}}.Select({{paramName}} => new {{nestedDtoName}} {
+            {{propertiesCode}}
+            {{spaces}}})
+            """;
+        return code;
     }
 
-    protected string ConvertNullableAccessToExplicitCheck(string expression)
+    protected string ConvertNullableAccessToExplicitCheck(string expression, string defaultValue)
     {
         // Example: c.Child?.Id → c.Child != null ? c.Child.Id : null
         // Example: s.Child3?.Child?.Id → s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null
@@ -270,7 +243,7 @@ internal abstract record SelectExprInfo
             return expression;
         // Build null checks
         var nullCheckPart = string.Join(" && ", checks);
-        return $"{nullCheckPart} ? {accessPath} : default";
+        return $"{nullCheckPart} ? {accessPath} : {defaultValue}";
     }
 
     protected string? GetImplicitPropertyName(ExpressionSyntax expression)
@@ -280,14 +253,41 @@ internal abstract record SelectExprInfo
         {
             return memberAccess.Name.Identifier.Text;
         }
-
         // Get property name from identifier (e.g., id)
         if (expression is IdentifierNameSyntax identifier)
         {
             return identifier.Identifier.Text;
         }
-
         // Do not process other complex expressions
         return null;
+    }
+
+    protected string GetDefaultValueForType(ITypeSymbol typeSymbol)
+    {
+        if (
+            typeSymbol.IsReferenceType
+            || typeSymbol.NullableAnnotation == NullableAnnotation.Annotated
+        )
+        {
+            return "null";
+        }
+        return typeSymbol.SpecialType switch
+        {
+            SpecialType.System_Boolean => "false",
+            SpecialType.System_Char => "'\\0'",
+            SpecialType.System_String => "string.Empty",
+            SpecialType.System_SByte
+            or SpecialType.System_Byte
+            or SpecialType.System_Int16
+            or SpecialType.System_UInt16
+            or SpecialType.System_Int32
+            or SpecialType.System_UInt32
+            or SpecialType.System_Int64
+            or SpecialType.System_UInt64
+            or SpecialType.System_Single
+            or SpecialType.System_Double
+            or SpecialType.System_Decimal => "0",
+            _ => "default",
+        };
     }
 }
