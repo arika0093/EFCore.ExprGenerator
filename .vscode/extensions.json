@@ -1,5 +1,6 @@
 {
 	"recommendations": [
-		"csharpier.csharpier-vscode"
+		"csharpier.csharpier-vscode",
+		"nromanov.dotrush"
 	]
 }

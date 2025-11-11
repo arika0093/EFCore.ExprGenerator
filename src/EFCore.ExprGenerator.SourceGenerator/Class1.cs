@@ -8,9 +8,15 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EFCore.ExprGenerator;
 
+/// <summary>
+/// Generator for SelectExpr method
+/// </summary>
 [Generator]
 public class SelectExprGenerator : IIncrementalGenerator
 {
+    /// <summary>
+    /// Initialize the generator
+    /// </summary>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // デバッグ: Source Generatorが実行されていることを確認
@@ -182,10 +188,7 @@ public class SelectExprGenerator : IIncrementalGenerator
                 }
             }
 
-            var nullableModifier = prop.IsNullable ? "?" : "";
-            var defaultValue = GetDefaultValue(propertyType, prop.IsNullable);
-
-            sb.AppendLine($"        public {propertyType}{nullableModifier} {prop.Name} {{ get; set; }}{defaultValue}");
+            sb.AppendLine($"        public required {propertyType} {prop.Name} {{ get; set; }}");
         }
 
         sb.AppendLine("    }");
@@ -193,20 +196,6 @@ public class SelectExprGenerator : IIncrementalGenerator
         // 現在のDTOを追加（ネストしたDTOは再帰呼び出しで既に追加されている）
         dtoClasses.Add(sb.ToString());
         return dtoName;
-    }
-
-    private static string GetDefaultValue(string typeName, bool isNullable)
-    {
-        if (isNullable)
-            return "";
-
-        if (typeName == "string")
-            return " = string.Empty;";
-
-        if (typeName.StartsWith("List<") || typeName.StartsWith("System.Collections.Generic.List<"))
-            return " = new();";
-
-        return "";
     }
 
     private static string GenerateSelectExprMethod(
@@ -311,7 +300,7 @@ public class SelectExprGenerator : IIncrementalGenerator
 
         // ?. が出現する箇所を見つけてnullチェックを構築
         var checks = new List<string>();
-        var parts = expression.Split(new[] { "?." }, StringSplitOptions.None);
+        var parts = expression.Split(["?."], StringSplitOptions.None);
 
         if (parts.Length < 2)
             return expression;
