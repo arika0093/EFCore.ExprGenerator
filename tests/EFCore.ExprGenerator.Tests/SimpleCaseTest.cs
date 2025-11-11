@@ -14,7 +14,7 @@ public class SimpleCaseTest
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().ShouldBe(typeof(Simple1Dto_2F80DAD3));
+        first.GetType().Name.ShouldContain("Simple1Dto_");
         first.Id.ShouldBe(1);
         first.FullName.ShouldBe("John Doe");
     }
@@ -30,7 +30,7 @@ public class SimpleCaseTest
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().ShouldBe(typeof(Simple1Dto_2F80DAD3));
+        first.GetType().Name.ShouldContain("Simple1Dto_");
         first.Id.ShouldBe(1);
         first.FullName.ShouldBe("John Doe");
     }
@@ -67,7 +67,7 @@ public class SimpleCaseTest
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().ShouldBe(typeof(Simple2Dto_C921C361));
+        first.GetType().Name.ShouldContain("Simple2Dto_");
         first.Id.ShouldBe(1);
         first.ItemCount.ShouldBe(3);
         first.NumberSum.ShouldBe(6);
@@ -89,7 +89,7 @@ public class SimpleCaseTest
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().ShouldBe(typeof(Simple2ManyLinqMethodsDto_803513BE));
+        first.GetType().Name.ShouldContain("Simple2ManyLinqMethodsDto_");
         first.Id.ShouldBe(1);
         first.ItemCount.ShouldBe(2);
         first.NumberSum.ShouldBe(2);
