@@ -93,6 +93,9 @@ var orders = await dbContext.Orders
 
 Note that you don't need to define `OrderDto` or `OrderItemDto`. The source generator automatically generates code from the anonymous selector. For example it will generate a method like:
 
+<details>
+<summary>Generated method example</summary>
+
 ```csharp
 namespace EFCore.ExprGenerator.Sample;
 internal static class GeneratedExpression
@@ -140,6 +143,8 @@ public class OrderDto_D03CE9AC
     public required IEnumerable<OrderItemDto_34ADD7E8> Items { get; set; }
 }
 ```
+
+</details>
 
 ## Usage
 ### Installation

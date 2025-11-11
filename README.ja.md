@@ -98,6 +98,9 @@ var orders = await dbContext.Orders
 `OrderDto`や`OrderItemDto`などを定義していないことに注目してください。
 Source Generatorにより、上記のコードから以下のようなメソッドが自動生成されます。
 
+<details>
+<summary>生成されたコード例</summary>
+
 ```csharp
 namespace EFCore.ExprGenerator.Sample;
 internal static class GeneratedExpression
@@ -145,6 +148,8 @@ public class OrderDto_D03CE9AC
     public required IEnumerable<OrderItemDto_34ADD7E8> Items { get; set; }
 }
 ```
+
+</details>
 
 ## 使用方法
 ### インストール
