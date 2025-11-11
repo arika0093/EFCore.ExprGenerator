@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace EFCore.ExprGenerator.Tests;
 
-public class SimpleCase
+public class SimpleCaseTest
 {
     [Fact]
     public void Case1()

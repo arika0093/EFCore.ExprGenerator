@@ -33,15 +33,17 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
         foreach (var prop in structure.Properties)
         {
             var propertyType = prop.TypeName;
-            // If propertyType is a generic type, use only the base type
-            if (propertyType.Contains("<"))
-            {
-                propertyType = propertyType[..propertyType.IndexOf("<")];
-            }
 
             // For nested structures, recursively generate DTOs (add first)
             if (prop.NestedStructure is not null)
             {
+                // Extract the base type (e.g., IEnumerable from IEnumerable<T>)
+                var baseType = propertyType;
+                if (propertyType.Contains("<"))
+                {
+                    baseType = propertyType[..propertyType.IndexOf("<")];
+                }
+
                 var nestedId = prop.NestedStructure.GetUniqueId();
                 var nestedDtoName = GenerateDtoClasses(
                     prop.NestedStructure,
@@ -51,7 +53,7 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
                 // Since propertyType already has a fully qualified name starting with global::,
                 // add global:: to nestedDtoName as well
                 var nestedDtoFullName = $"global::{namespaceName}.{nestedDtoName}";
-                propertyType = $"{propertyType}<{nestedDtoFullName}>";
+                propertyType = $"{baseType}<{nestedDtoFullName}>";
             }
             sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
         }
