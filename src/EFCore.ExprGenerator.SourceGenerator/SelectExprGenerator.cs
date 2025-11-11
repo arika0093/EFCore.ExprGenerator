@@ -19,13 +19,13 @@ public class SelectExprGenerator : IIncrementalGenerator
     /// </summary>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // デバッグ: Source Generatorが実行されていることを確認
+        // Debug: Verify that Source Generator is running
         context.RegisterPostInitializationOutput(ctx =>
         {
             ctx.AddSource("DebugInfo.g.cs", @"// Source Generator is running");
         });
 
-        // SelectExpr メソッド呼び出しを検出するプロバイダー
+        // Provider to detect SelectExpr method invocations
         var invocations = context
             .SyntaxProvider.CreateSyntaxProvider(
                 predicate: static (node, _) => IsSelectExprInvocation(node),
@@ -33,7 +33,7 @@ public class SelectExprGenerator : IIncrementalGenerator
             )
             .Where(static info => info is not null);
 
-        // コード生成
+        // Code generation
         context.RegisterSourceOutput(
             invocations,
             (spc, info) =>
@@ -47,13 +47,13 @@ public class SelectExprGenerator : IIncrementalGenerator
 
     private static bool IsSelectExprInvocation(SyntaxNode node)
     {
-        // InvocationExpressionで、メソッド名が "SelectExpr" のものを検出
+        // Detect InvocationExpression with method name "SelectExpr"
         if (node is not InvocationExpressionSyntax invocation)
             return false;
 
         var expression = invocation.Expression;
 
-        // MemberAccessExpression (例: query.SelectExpr)
+        // MemberAccessExpression (e.g., query.SelectExpr)
         if (expression is MemberAccessExpressionSyntax memberAccess)
         {
             return memberAccess.Name.Identifier.Text == "SelectExpr";
@@ -67,7 +67,7 @@ public class SelectExprGenerator : IIncrementalGenerator
         var invocation = (InvocationExpressionSyntax)context.Node;
         var semanticModel = context.SemanticModel;
 
-        // 引数からラムダ式を取得
+        // Get lambda expression from arguments
         if (invocation.ArgumentList.Arguments.Count == 0)
             return null;
 
@@ -75,7 +75,7 @@ public class SelectExprGenerator : IIncrementalGenerator
         if (lambdaArg is not LambdaExpressionSyntax lambda)
             return null;
 
-        // ラムダの本体が匿名型の初期化子かチェック
+        // Check if lambda body is an anonymous object initializer
         var body = lambda.Body;
         AnonymousObjectCreationExpressionSyntax? anonymousObj = body switch
         {
@@ -86,7 +86,7 @@ public class SelectExprGenerator : IIncrementalGenerator
         if (anonymousObj is null)
             return null;
 
-        // MemberAccessExpressionから対象の型を取得
+        // Get target type from MemberAccessExpression
         if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
             return null;
 
@@ -94,12 +94,12 @@ public class SelectExprGenerator : IIncrementalGenerator
         if (symbolInfo.Symbol is not IPropertySymbol and not ILocalSymbol and not IParameterSymbol)
             return null;
 
-        // 型情報を取得
+        // Get type information
         var typeInfo = semanticModel.GetTypeInfo(memberAccess.Expression);
         if (typeInfo.Type is not INamedTypeSymbol namedType)
             return null;
 
-        // IQueryable<T> の T を取得
+        // Get T from IQueryable<T>
         var sourceType = namedType.TypeArguments.FirstOrDefault();
         if (sourceType is null)
             return null;
@@ -116,30 +116,30 @@ public class SelectExprGenerator : IIncrementalGenerator
     {
         try
         {
-            // 匿名型の構造を解析
+            // Analyze anonymous type structure
             var dtoStructure = AnalyzeAnonymousType(
                 info.AnonymousObject,
                 info.SemanticModel,
                 info.SourceType
             );
 
-            // プロパティが空の場合はスキップ
+            // Skip if properties are empty
             if (dtoStructure.Properties.Count == 0)
                 return;
 
-            // ユニークIDを生成（プロパティ構造のハッシュから）
+            // Generate unique ID (from hash of property structure)
             var uniqueId = GenerateUniqueId(dtoStructure);
 
-            // ネームスペースを取得
+            // Get namespace
             var namespaceSymbol = info.SourceType.ContainingNamespace;
             var namespaceName = namespaceSymbol?.ToDisplayString() ?? "Generated";
 
-            // DTOクラスを生成（ネストしたDTOも含む）
+            // Generate DTO classes (including nested DTOs)
             var dtoClasses = new List<string>();
             var mainDtoName = GenerateDtoClasses(dtoStructure, uniqueId, dtoClasses, namespaceName);
             var mainDtoFullName = $"global::{namespaceName}.{mainDtoName}";
 
-            // SelectExprメソッドを生成
+            // Generate SelectExpr method
             var selectExprMethod = GenerateSelectExprMethod(
                 info.SourceType.Name,
                 mainDtoFullName,
@@ -147,7 +147,7 @@ public class SelectExprGenerator : IIncrementalGenerator
                 info.AnonymousObject
             );
 
-            // 最終的なソースコードを組み立て
+            // Build final source code
             var sourceCode = BuildSourceCode(
                 namespaceName,
                 mainDtoName,
@@ -155,12 +155,12 @@ public class SelectExprGenerator : IIncrementalGenerator
                 selectExprMethod
             );
 
-            // Source Generatorに登録
+            // Register with Source Generator
             context.AddSource($"GeneratedExpression_{uniqueId}.g.cs", sourceCode);
         }
         catch (Exception ex)
         {
-            // デバッグ用にエラー情報を出力
+            // Output error information for debugging
             var errorMessage =
                 $@"// Source Generator Error: {ex.Message}
 // Stack Trace: {ex.StackTrace}
@@ -185,13 +185,13 @@ public class SelectExprGenerator : IIncrementalGenerator
         foreach (var prop in structure.Properties)
         {
             var propertyType = prop.TypeName;
-            // もしpropertyTypeがGenerics型であれば、その親側のみを使う
+            // If propertyType is a generic type, use only the base type
             if (propertyType.Contains("<"))
             {
                 propertyType = propertyType[..propertyType.IndexOf("<")];
             }
 
-            // ネストした構造の場合、再帰的にDTOを生成（先に追加）
+            // For nested structures, recursively generate DTOs (add first)
             if (prop.NestedStructure is not null)
             {
                 var nestedId = GenerateUniqueId(prop.NestedStructure);
@@ -201,7 +201,8 @@ public class SelectExprGenerator : IIncrementalGenerator
                     dtoClasses,
                     namespaceName
                 );
-                // propertyTypeは既にglobal::で始まる完全修飾名なので、nestedDtoNameも同様にglobal::を付ける
+                // Since propertyType already has a fully qualified name starting with global::,
+                // add global:: to nestedDtoName as well
                 var nestedDtoFullName = $"global::{namespaceName}.{nestedDtoName}";
                 propertyType = $"{propertyType}<{nestedDtoFullName}>";
             }
@@ -210,7 +211,7 @@ public class SelectExprGenerator : IIncrementalGenerator
 
         sb.AppendLine("    }");
 
-        // 現在のDTOを追加（ネストしたDTOは再帰呼び出しで既に追加されている）
+        // Add current DTO (nested DTOs are already added by recursive calls)
         dtoClasses.Add(sb.ToString());
         return dtoName;
     }
@@ -238,7 +239,7 @@ public class SelectExprGenerator : IIncrementalGenerator
         sb.AppendLine($"            return query.Select(s => new {dtoName}");
         sb.AppendLine("            {");
 
-        // 各プロパティの割り当てを生成
+        // Generate property assignments
         var propertyAssignments = new List<string>();
         foreach (var prop in structure.Properties)
         {
@@ -257,39 +258,39 @@ public class SelectExprGenerator : IIncrementalGenerator
     {
         var expression = property.OriginalExpression;
 
-        // ネストしたSelect（コレクション）の場合
+        // For nested Select (collection) case
         if (property.NestedStructure is not null)
         {
             var converted = ConvertNestedSelect(expression, property.NestedStructure);
-            // デバッグ: 変換が正しく行われたかチェック
+            // Debug: Check if conversion was performed correctly
             if (converted == expression && expression.Contains("Select"))
             {
-                // 変換が行われなかった場合、元の式をコメントとして残す
+                // If conversion was not performed, leave the original expression as a comment
                 return $"{converted} /* CONVERSION FAILED: {property.Name} */";
             }
             return converted;
         }
 
-        // Nullable演算子が使われている場合、明示的なnullチェックに変換
+        // If nullable operator is used, convert to explicit null check
         if (property.IsNullable && expression.Contains("?."))
         {
             return ConvertNullableAccessToExplicitCheck(expression);
         }
 
-        // 通常のプロパティアクセス
+        // Regular property access
         return expression;
     }
 
     private static string ConvertNestedSelect(string expression, DtoStructure nestedStructure)
     {
-        // 例: s.Childs.Select(c => new { ... })
-        // パラメータ名を抽出（例: "c"）
-        // .Select の後に空白やジェネリック型パラメータがある可能性を考慮
+        // Example: s.Childs.Select(c => new { ... })
+        // Extract parameter name (e.g., "c")
+        // Consider the possibility of whitespace or generic type parameters after .Select
         var selectIndex = expression.IndexOf(".Select");
         if (selectIndex == -1)
             return expression;
 
-        // Select の後の '(' を探す（ラムダの開始）
+        // Find '(' after Select (start of lambda)
         var lambdaStart = expression.IndexOf("(", selectIndex);
         if (lambdaStart == -1)
             return expression;
@@ -300,7 +301,7 @@ public class SelectExprGenerator : IIncrementalGenerator
 
         var paramName = expression.Substring(lambdaStart + 1, lambdaArrow - lambdaStart - 1).Trim();
         if (string.IsNullOrEmpty(paramName))
-            paramName = "x"; // デフォルトパラメータ名
+            paramName = "x"; // Default parameter name
 
         var baseExpression = expression[..selectIndex];
         var uniqueId = GenerateUniqueId(nestedStructure);
@@ -310,7 +311,7 @@ public class SelectExprGenerator : IIncrementalGenerator
         foreach (var prop in nestedStructure.Properties)
         {
             var assignment = GeneratePropertyAssignment(prop, paramName);
-            // ネストしたSelectの場合、複数行にならないように inline に変換
+            // For nested Select, convert to inline to avoid multi-line
             assignment = assignment.Replace("\n", " ").Replace("\r", "");
             propertyAssignments.Add($"{prop.Name} = {assignment}");
         }
@@ -321,29 +322,29 @@ public class SelectExprGenerator : IIncrementalGenerator
 
     private static string ConvertNullableAccessToExplicitCheck(string expression)
     {
-        // 例: c.Child?.Id → c.Child != null ? c.Child.Id : null
-        // 例: s.Child3?.Child?.Id → s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null
+        // Example: c.Child?.Id → c.Child != null ? c.Child.Id : null
+        // Example: s.Child3?.Child?.Id → s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null
 
         if (!expression.Contains("?."))
             return expression;
 
-        // ?. を . に置換して実際のアクセスパスを作成
+        // Replace ?. with . to create the actual access path
         var accessPath = expression.Replace("?.", ".");
 
-        // ?. が出現する箇所を見つけてnullチェックを構築
+        // Find where ?. occurs and build null checks
         var checks = new List<string>();
         var parts = expression.Split(["?."], StringSplitOptions.None);
 
         if (parts.Length < 2)
             return expression;
 
-        // 最初のパート以外はnullチェックが必要
+        // All parts except the first require null checks
         var currentPath = parts[0];
         for (int i = 1; i < parts.Length; i++)
         {
             checks.Add($"{currentPath} != null");
 
-            // 次のパートの最初のトークン（プロパティ名）を取得
+            // Get the first token (property name) of the next part
             var nextPart = parts[i];
             var dotIndex = nextPart.IndexOf('.');
             var propertyName = dotIndex > 0 ? nextPart[..dotIndex] : nextPart;
@@ -354,7 +355,7 @@ public class SelectExprGenerator : IIncrementalGenerator
         if (checks.Count == 0)
             return expression;
 
-        // nullチェックを構築
+        // Build null checks
         var nullCheckPart = string.Join(" && ", checks);
 
         return $"{nullCheckPart} ? {accessPath} : default";
@@ -408,15 +409,15 @@ public class SelectExprGenerator : IIncrementalGenerator
             string propertyName;
             var expression = initializer.Expression;
 
-            // 明示的なプロパティ名がある場合 (例: Id = s.Id)
+            // For explicit property names (e.g., Id = s.Id)
             if (initializer.NameEquals is not null)
             {
                 propertyName = initializer.NameEquals.Name.Identifier.Text;
             }
-            // 暗黙的なプロパティ名の場合 (例: s.Id)
+            // For implicit property names (e.g., s.Id)
             else
             {
-                // 式から推測されるプロパティ名を取得
+                // Get property name inferred from expression
                 var name = GetImplicitPropertyName(expression);
                 if (name is null)
                 {
@@ -441,19 +442,19 @@ public class SelectExprGenerator : IIncrementalGenerator
 
     private static string? GetImplicitPropertyName(ExpressionSyntax expression)
     {
-        // メンバーアクセス (例: s.Id) からプロパティ名を取得
+        // Get property name from member access (e.g., s.Id)
         if (expression is MemberAccessExpressionSyntax memberAccess)
         {
             return memberAccess.Name.Identifier.Text;
         }
 
-        // 識別子 (例: id) からプロパティ名を取得
+        // Get property name from identifier (e.g., id)
         if (expression is IdentifierNameSyntax identifier)
         {
             return identifier.Identifier.Text;
         }
 
-        // その他の複雑な式の場合は処理しない
+        // Do not process other complex expressions
         return null;
     }
 
@@ -470,20 +471,20 @@ public class SelectExprGenerator : IIncrementalGenerator
         var propertyType = typeInfo.Type;
         var isNullable = propertyType.NullableAnnotation == NullableAnnotation.Annotated;
 
-        // Nullable演算子 ?. が使われているかチェック
+        // Check if nullable operator ?. is used
         var hasNullableAccess = HasNullableAccess(expression);
 
-        // ネストした Select (例: s.Childs.Select(...)) を検出
+        // Detect nested Select (e.g., s.Childs.Select(...))
         DtoStructure? nestedStructure = null;
         if (expression is InvocationExpressionSyntax nestedInvocation)
         {
-            // Select メソッド呼び出しかチェック
+            // Check if it's a Select method invocation
             if (
                 nestedInvocation.Expression is MemberAccessExpressionSyntax nestedMemberAccess
                 && nestedMemberAccess.Name.Identifier.Text == "Select"
             )
             {
-                // ラムダ式の中の匿名型を解析
+                // Analyze anonymous type in lambda expression
                 if (nestedInvocation.ArgumentList.Arguments.Count > 0)
                 {
                     var lambdaArg = nestedInvocation.ArgumentList.Arguments[0].Expression;
@@ -493,7 +494,7 @@ public class SelectExprGenerator : IIncrementalGenerator
                             is AnonymousObjectCreationExpressionSyntax nestedAnonymous
                     )
                     {
-                        // コレクション要素の型を取得
+                        // Get collection element type
                         var collectionType = semanticModel
                             .GetTypeInfo(nestedMemberAccess.Expression)
                             .Type;
@@ -525,13 +526,13 @@ public class SelectExprGenerator : IIncrementalGenerator
 
     private static bool HasNullableAccess(ExpressionSyntax expression)
     {
-        // ?. 演算子が使われているかチェック
+        // Check if ?. operator is used
         return expression.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any();
     }
 
     private static string GenerateUniqueId(DtoStructure structure)
     {
-        // プロパティ構造からハッシュを生成
+        // Generate hash from property structure
         var signature = string.Join(
             "|",
             structure.Properties.Select(p => $"{p.Name}:{p.TypeName}:{p.IsNullable}")
@@ -539,7 +540,7 @@ public class SelectExprGenerator : IIncrementalGenerator
 
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(signature));
-        return BitConverter.ToString(hash).Replace("-", "")[..8]; // 最初の8文字を使用
+        return BitConverter.ToString(hash).Replace("-", "")[..8]; // Use first 8 characters
     }
 
     private record SelectExprInfo(
