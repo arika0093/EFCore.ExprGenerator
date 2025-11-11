@@ -31,29 +31,28 @@ internal record DtoProperty(
         // Check if nullable operator ?. is used
         var hasNullableAccess = HasNullableAccess(expression);
 
-        // Detect nested Select (e.g., s.Childs.Select(...))
+        // Detect nested Select (e.g., s.Childs.Select(...) or s.Childs.Select(...).ToList())
         DtoStructure? nestedStructure = null;
-        if (expression is InvocationExpressionSyntax nestedInvocation)
+        // First, try to find Select invocation (handles both direct Select and chained methods like ToList)
+        var selectInvocation = FindSelectInvocation(expression);
+        if (selectInvocation is not null)
         {
-            // Check if it's a Select method invocation
-            if (
-                nestedInvocation.Expression is MemberAccessExpressionSyntax nestedMemberAccess
-                && nestedMemberAccess.Name.Identifier.Text == "Select"
-            )
+            // Analyze anonymous type in lambda expression
+            if (selectInvocation.ArgumentList.Arguments.Count > 0)
             {
-                // Analyze anonymous type in lambda expression
-                if (nestedInvocation.ArgumentList.Arguments.Count > 0)
+                var lambdaArg = selectInvocation.ArgumentList.Arguments[0].Expression;
+                if (
+                    lambdaArg is LambdaExpressionSyntax nestedLambda
+                    && nestedLambda.Body is AnonymousObjectCreationExpressionSyntax nestedAnonymous
+                )
                 {
-                    var lambdaArg = nestedInvocation.ArgumentList.Arguments[0].Expression;
+                    // Get collection element type from the Select's source
                     if (
-                        lambdaArg is LambdaExpressionSyntax nestedLambda
-                        && nestedLambda.Body
-                            is AnonymousObjectCreationExpressionSyntax nestedAnonymous
+                        selectInvocation.Expression is MemberAccessExpressionSyntax selectMemberAccess
                     )
                     {
-                        // Get collection element type
                         var collectionType = semanticModel
-                            .GetTypeInfo(nestedMemberAccess.Expression)
+                            .GetTypeInfo(selectMemberAccess.Expression)
                             .Type;
                         if (
                             collectionType is INamedTypeSymbol namedCollectionType
@@ -85,5 +84,30 @@ internal record DtoProperty(
     {
         // Check if ?. operator is used
         return expression.DescendantNodes().OfType<ConditionalAccessExpressionSyntax>().Any();
+    }
+
+    private static InvocationExpressionSyntax? FindSelectInvocation(ExpressionSyntax expression)
+    {
+        // Direct Select invocation: s.Childs.Select(...)
+        if (expression is InvocationExpressionSyntax invocation)
+        {
+            if (
+                invocation.Expression is MemberAccessExpressionSyntax memberAccess
+                && memberAccess.Name.Identifier.Text == "Select"
+            )
+            {
+                return invocation;
+            }
+
+            // Chained method call (e.g., ToList, ToArray, etc.): s.Childs.Select(...).ToList()
+            // The invocation is for ToList, but we need to find Select in its expression
+            if (invocation.Expression is MemberAccessExpressionSyntax chainedMemberAccess)
+            {
+                // Recursively search in the expression part (before the chained method)
+                return FindSelectInvocation(chainedMemberAccess.Expression);
+            }
+        }
+
+        return null;
     }
 }

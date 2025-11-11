@@ -154,7 +154,7 @@ internal abstract record SelectExprInfo
     )
     {
         var spaces = new string(' ', indents);
-        // Example: s.Childs.Select(c => new { ... })
+        // Example: s.Childs.Select(c => new { ... }) or s.Childs.Select(c => new { ... }).ToList()
         // Extract parameter name (e.g., "c")
         // Consider the possibility of whitespace or generic type parameters after .Select
         var selectIndex = expression.IndexOf(".Select");
@@ -173,6 +173,26 @@ internal abstract record SelectExprInfo
         var baseExpression = expression[..selectIndex];
         var nestedDtoName = GetClassName(nestedStructure);
 
+        // Find the closing paren for Select(...) to detect any chained methods like .ToList()
+        var parenDepth = 0;
+        var selectEnd = lambdaStart;
+        for (int i = lambdaStart; i < expression.Length; i++)
+        {
+            if (expression[i] == '(')
+                parenDepth++;
+            else if (expression[i] == ')')
+            {
+                parenDepth--;
+                if (parenDepth == 0)
+                {
+                    selectEnd = i + 1;
+                    break;
+                }
+            }
+        }
+        // Extract any chained method calls after Select(...) (e.g., ".ToList()")
+        var chainedMethods = selectEnd < expression.Length ? expression.Substring(selectEnd) : "";
+
         var propertyAssignments = new List<string>();
         foreach (var prop in nestedStructure.Properties)
         {
@@ -183,7 +203,7 @@ internal abstract record SelectExprInfo
         var code = $$"""
             {{baseExpression}}.Select({{paramName}} => new {{nestedDtoName}} {
             {{propertiesCode}}
-            {{spaces}}})
+            {{spaces}}}){{chainedMethods}}
             """;
         return code;
     }

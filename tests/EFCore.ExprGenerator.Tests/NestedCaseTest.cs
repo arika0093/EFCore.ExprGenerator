@@ -71,13 +71,15 @@ public class NestedCaseTest
                 ChildDescription = s.Child?.Description,
                 GrandChildDetails = s.Child?.GrandChild?.Details,
                 GreatGrandChildInfo = s.Child?.GrandChild?.GreatGrandChild?.Info,
-                Child2Summaries = s.Child2.Select(c2 => new
-                {
-                    c2.Summary,
-                    GrandChild2 = c2.GrandChilds,
-                    GrandChild2Notes = c2.GrandChilds.Select(gc2 => gc2.Notes),
-                    GrandChild2Values = c2.GrandChilds.Select(gc2 => gc2.Value),
-                }),
+                Child2Summaries = s
+                    .Child2.Select(c2 => new
+                    {
+                        c2.Summary,
+                        GrandChild2 = c2.GrandChilds,
+                        GrandChild2Notes = c2.GrandChilds.Select(gc2 => gc2.Notes),
+                        GrandChild2Values = c2.GrandChilds.Select(gc2 => gc2.Value),
+                    })
+                    .ToList(),
             })
             .ToList();
         converted.Count.ShouldBe(1);

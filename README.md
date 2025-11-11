@@ -111,14 +111,9 @@ internal static class GeneratedExpression
         {
             Id = s.Id,
             CustomerName = s.Customer != null ? s.Customer.Name : default,
-            CustomerCountry = s.Customer != null && s.Customer.Address != null && s.Customer.Address.Country != null
-                ? s.Customer.Address.Country.Name
-                : default,
-            CustomerCity = s.Customer != null && s.Customer.Address != null && s.Customer.Address.City != null
-                ? s.Customer.Address.City.Name
-                : default,
-            Items = s.OrderItems != null
-                ? s.OrderItems.Select(oi => new OrderItemDto_34ADD7E8
+            CustomerCountry = s.Customer != null && s.Customer.Address != null && s.Customer.Address.Country != null ? s.Customer.Address.Country.Name : default,
+            CustomerCity = s.Customer != null && s.Customer.Address != null && s.Customer.Address.City != null ? s.Customer.Address.City.Name : default,
+            Items = s.OrderItems != null ? s.OrderItems.Select(oi => new OrderItemDto_34ADD7E8
                 {
                     ProductName = oi.Product != null ? oi.Product.Name : default,
                     Quantity = oi.Quantity
