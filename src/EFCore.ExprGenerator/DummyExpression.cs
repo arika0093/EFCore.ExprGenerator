@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 
+namespace EFCore.ExprGenerator;
+
 /// <summary>
 /// Dummy expression methods for EFCore.ExprGenerator to compile correctly.
 /// </summary>
