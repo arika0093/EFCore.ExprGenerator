@@ -103,8 +103,7 @@ This project is implemented as a **C# Source Generator**.
 
 Always perform a clean build as past caches may remain.
 ```bash
-dotnet clean
-dotnet build
+dotnet clean && dotnet build
 dotnet test --no-build
 ```
 
