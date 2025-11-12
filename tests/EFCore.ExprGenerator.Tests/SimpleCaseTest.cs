@@ -20,6 +20,20 @@ public class SimpleCaseTest
     }
 
     [Fact]
+    public void Case1Other()
+    {
+        var converted = Case1Data
+            .AsQueryable()
+            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " + " + s.LastName })
+            .ToList();
+        converted.Count.ShouldBe(2);
+        var first = converted[0];
+        first.GetType().Name.ShouldContain("Simple1Dto_");
+        first.Id.ShouldBe(1);
+        first.FullName.ShouldBe("John + Doe");
+    }
+
+    [Fact]
     public void Case1ManyLinqMethods()
     {
         var converted = Case1Data
@@ -38,7 +52,7 @@ public class SimpleCaseTest
     [Fact]
     public void Case1Manually()
     {
-        var converted = Case1ManualData
+        var converted = Case1Data
             .AsQueryable()
             .SelectExpr(s => new Simple1Dto
             {
@@ -54,6 +68,24 @@ public class SimpleCaseTest
     }
 
     [Fact]
+    public void Case1ManuallyOther()
+    {
+        var converted = Case1Data
+            .AsQueryable()
+            .SelectExpr(s => new Simple1Dto
+            {
+                Id = s.Id,
+                FullName = s.FirstName + " + " + s.LastName,
+            })
+            .ToList();
+        converted.Count.ShouldBe(2);
+        var first = converted[0];
+        first.GetType().ShouldBe(typeof(Simple1Dto));
+        first.Id.ShouldBe(1);
+        first.FullName.ShouldBe("John + Doe");
+    }
+
+    [Fact]
     public void Case2()
     {
         var converted = Case2Data
@@ -61,7 +93,7 @@ public class SimpleCaseTest
             .SelectExpr(s => new
             {
                 s.Id,
-                ItemCount = s.ItemList.Count(),
+                ItemCount = s.ItemList.Count,
                 NumberSum = s.NumberEnumerable.Sum(),
             })
             .ToList();
@@ -98,12 +130,12 @@ public class SimpleCaseTest
     [Fact]
     public void Case2Manually()
     {
-        var converted = Case2ManualData
+        var converted = Case2Data
             .AsQueryable()
             .SelectExpr(s => new Simple2Dto
             {
                 Id = s.Id,
-                ItemCount = s.ItemList.Count(),
+                ItemCount = s.ItemList.Count,
                 NumberSum = s.NumberEnumerable.Sum(),
             })
             .ToList();
@@ -131,36 +163,6 @@ public class SimpleCaseTest
         },
     ];
     private readonly List<Simple2> Case2Data =
-    [
-        new()
-        {
-            Id = 1,
-            ItemList = ["A", "B", "C"],
-            NumberEnumerable = [1, 2, 3],
-        },
-        new()
-        {
-            Id = 2,
-            ItemList = ["D", "E", "F"],
-            NumberEnumerable = [4, 5, 6],
-        },
-    ];
-    private readonly List<Simple1Manual> Case1ManualData =
-    [
-        new()
-        {
-            Id = 1,
-            FirstName = "John",
-            LastName = "Doe",
-        },
-        new()
-        {
-            Id = 2,
-            FirstName = "Jane",
-            LastName = "Smith",
-        },
-    ];
-    private readonly List<Simple2Manual> Case2ManualData =
     [
         new()
         {

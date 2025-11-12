@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EFCore.ExprGenerator;
@@ -66,23 +67,24 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
         return dtoName;
     }
 
-    protected override string GenerateSelectExprMethod(string dtoName, DtoStructure structure)
+    protected override string GenerateSelectExprMethod(
+        string dtoName,
+        DtoStructure structure,
+        InterceptableLocation location
+    )
     {
         var sourceTypeFullName = structure.SourceTypeFullName;
         var sb = new StringBuilder();
-        sb.AppendLine(
-            $$""""
-                /// <summary>
-                /// generated select expression method of {{dtoName}}
-                /// </summary>
-                public static IQueryable<{{dtoName}}> SelectExpr<TResult>(
-                    this IQueryable<{{sourceTypeFullName}}> query,
-                    Func<{{sourceTypeFullName}}, TResult> selector)
-                {
-                    return query.Select(s => new {{dtoName}}
-                    {
-            """"
-        );
+
+        sb.AppendLine(GenerateMethodHeaderPart(dtoName, location));
+        sb.AppendLine($"    public static IQueryable<{dtoName}> SelectExpr<TResult>(");
+        sb.AppendLine($"        this IQueryable<{sourceTypeFullName}> query,");
+        sb.AppendLine($"        Func<{sourceTypeFullName}, TResult> selector");
+        sb.AppendLine($"    )");
+        sb.AppendLine($"    {{");
+        sb.AppendLine($"        return query.Select(s => new {dtoName}");
+        sb.AppendLine($"        {{");
+
         // Generate property assignments
         var propertyAssignments = structure
             .Properties.Select(prop =>
@@ -98,5 +100,5 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
     }
 
     public override string GetClassName(DtoStructure structure) =>
-        $"{structure.SourceTypeName}Dto_{GetUniqueId()}";
+        $"{structure.SourceTypeName}Dto_{structure.GetUniqueId()}";
 }

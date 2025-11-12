@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EFCore.ExprGenerator;
@@ -30,7 +31,11 @@ internal record SelectExprInfoNamed : SelectExprInfo
 
     public override string GetClassName(DtoStructure structure) => structure.SourceTypeName;
 
-    protected override string GenerateSelectExprMethod(string dtoName, DtoStructure structure)
+    protected override string GenerateSelectExprMethod(
+        string dtoName,
+        DtoStructure structure,
+        InterceptableLocation location
+    )
     {
         // Use SourceType for the query source (not the DTO return type)
         var querySourceTypeFullName = SourceType.ToDisplayString(
@@ -42,19 +47,15 @@ internal record SelectExprInfoNamed : SelectExprInfo
         var originalExpression = ObjectCreation.ToString();
 
         var sb = new StringBuilder();
-        sb.AppendLine(
-            $$""""
-                /// <summary>
-                /// generated select expression method of {{dtoName}}
-                /// </summary>
-                public static IQueryable<{{dtoName}}> SelectExpr<TResult>(
-                    this IQueryable<{{querySourceTypeFullName}}> query,
-                    Func<{{querySourceTypeFullName}}, TResult> selector)
-                {
-                    return query.Select(s => {{originalExpression}});
-                }
-            """"
-        );
+
+        sb.AppendLine(GenerateMethodHeaderPart(dtoName, location));
+        sb.AppendLine($"    public static IQueryable<{dtoName}> SelectExpr<TResult>(");
+        sb.AppendLine($"        this IQueryable<{querySourceTypeFullName}> query,");
+        sb.AppendLine($"        Func<{querySourceTypeFullName}, TResult> selector)");
+        sb.AppendLine("    {");
+        sb.AppendLine($"        return query.Select(s => {originalExpression});");
+        sb.AppendLine("    }");
+
         return sb.ToString();
     }
 }

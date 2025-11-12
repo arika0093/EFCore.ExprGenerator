@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EFCore.ExprGenerator;
@@ -23,7 +24,11 @@ internal abstract record SelectExprInfo
     public abstract string GetClassName(DtoStructure structure);
 
     // Generate SelectExpr method
-    protected abstract string GenerateSelectExprMethod(string dtoName, DtoStructure structure);
+    protected abstract string GenerateSelectExprMethod(
+        string dtoName,
+        DtoStructure structure,
+        InterceptableLocation location
+    );
 
     // Generate DTO classes
     public abstract string GenerateDtoClasses(
@@ -37,6 +42,10 @@ internal abstract record SelectExprInfo
     {
         try
         {
+            var location =
+                SemanticModel.GetInterceptableLocation(Invocation)
+                ?? throw new InvalidOperationException("Failed to get interceptable location.");
+
             // Analyze anonymous type structure
             var dtoStructure = GenerateDtoStructure();
 
@@ -44,8 +53,8 @@ internal abstract record SelectExprInfo
             if (dtoStructure.Properties.Count == 0)
                 return;
 
-            // Generate unique ID (from hash of property structure)
-            var uniqueId = GetUniqueId();
+            // Generate unique ID (from hash of property structure and first location)
+            var uniqueId = GetUniqueId(location);
 
             // Get namespace
             var namespaceSymbol = SourceType.ContainingNamespace;
@@ -56,8 +65,12 @@ internal abstract record SelectExprInfo
             var mainDtoName = GenerateDtoClasses(dtoStructure, dtoClasses, namespaceName);
             var mainDtoFullName = $"global::{namespaceName}.{mainDtoName}";
 
-            // Generate SelectExpr method
-            var selectExprMethod = GenerateSelectExprMethod(mainDtoFullName, dtoStructure);
+            // Generate SelectExpr method with interceptor attribute (using only first location)
+            var selectExprMethod = GenerateSelectExprMethod(
+                mainDtoFullName,
+                dtoStructure,
+                location
+            );
 
             // Build final source code
             var sourceCode = BuildSourceCode(
@@ -79,13 +92,18 @@ internal abstract record SelectExprInfo
                  * Stack Trace: {ex.StackTrace}
                  */
                 """;
-            var hash = Guid.NewGuid().ToString("N").Substring(0, 8);
+            var hash = Guid.NewGuid().ToString("N")[..8];
             context.AddSource($"GeneratorError_{hash}.g.cs", errorMessage);
         }
     }
 
-    // Generate unique ID
-    public string GetUniqueId() => GenerateDtoStructure().GetUniqueId();
+    // Generate unique ID (including location information)
+    public string GetUniqueId(InterceptableLocation location)
+    {
+        var structureId = GenerateDtoStructure().GetUniqueId();
+        var locationId = location.Data.GetHashCode().ToString("X8");
+        return $"{structureId}_{locationId}";
+    }
 
     protected string BuildSourceCode(
         string namespaceName,
@@ -120,6 +138,19 @@ internal abstract record SelectExprInfo
             sb.AppendLine(dtoClass);
         }
         return sb.ToString();
+    }
+
+    protected string GenerateMethodHeaderPart(string dtoName, InterceptableLocation location)
+    {
+        var interceptAttr =
+            $"global::System.Runtime.CompilerServices.InterceptsLocation({location.Version}, @\"{location.Data}\")";
+        return $"""
+                /// <summary>
+                /// generated select expression method {dtoName} <br/>
+                /// at {location.GetDisplayLocation()}
+                /// </summary>
+                [{interceptAttr}]
+            """;
     }
 
     protected string GeneratePropertyAssignment(DtoProperty property, int indents)
@@ -191,7 +222,7 @@ internal abstract record SelectExprInfo
             }
         }
         // Extract any chained method calls after Select(...) (e.g., ".ToList()")
-        var chainedMethods = selectEnd < expression.Length ? expression.Substring(selectEnd) : "";
+        var chainedMethods = selectEnd < expression.Length ? expression[selectEnd..] : "";
 
         var propertyAssignments = new List<string>();
         foreach (var prop in nestedStructure.Properties)

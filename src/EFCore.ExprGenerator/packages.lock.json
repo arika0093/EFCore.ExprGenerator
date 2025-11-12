@@ -42,13 +42,10 @@
           "System.Collections.Immutable": "9.0.0"
         }
       },
-      "efcore.exprgenerator.core": {
-        "type": "Project"
-      },
       "efcore.exprgenerator.sourcegenerator": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.CodeAnalysis.CSharp": "[4.14.0, )"
+          "Microsoft.CodeAnalysis.CSharp": "[4.*, )"
         }
       }
     }
