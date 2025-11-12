@@ -142,14 +142,12 @@ internal abstract record SelectExprInfo
 
     protected string GenerateMethodHeaderPart(string dtoName, InterceptableLocation location)
     {
-        var interceptAttr =
-            $"global::System.Runtime.CompilerServices.InterceptsLocation({location.Version}, @\"{location.Data}\")";
         return $"""
                 /// <summary>
                 /// generated select expression method {dtoName} <br/>
                 /// at {location.GetDisplayLocation()}
                 /// </summary>
-                [{interceptAttr}]
+                {location.GetInterceptsLocationAttributeSyntax()}
             """;
     }
 
