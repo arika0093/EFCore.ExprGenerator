@@ -52,10 +52,7 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
                     dtoClasses,
                     namespaceName
                 );
-                // Since propertyType already has a fully qualified name starting with global::,
-                // add global:: to nestedDtoName as well
-                var nestedDtoFullName = $"global::{namespaceName}.{nestedDtoName}";
-                propertyType = $"{baseType}<{nestedDtoFullName}>";
+                propertyType = $"{baseType}<{nestedDtoName}>";
             }
             sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
         }

@@ -63,14 +63,9 @@ internal abstract record SelectExprInfo
             // Generate DTO classes (including nested DTOs)
             var dtoClasses = new List<string>();
             var mainDtoName = GenerateDtoClasses(dtoStructure, dtoClasses, namespaceName);
-            var mainDtoFullName = $"global::{namespaceName}.{mainDtoName}";
 
             // Generate SelectExpr method with interceptor attribute (using only first location)
-            var selectExprMethod = GenerateSelectExprMethod(
-                mainDtoFullName,
-                dtoStructure,
-                location
-            );
+            var selectExprMethod = GenerateSelectExprMethod(mainDtoName, dtoStructure, location);
 
             // Build final source code
             var sourceCode = BuildSourceCode(
