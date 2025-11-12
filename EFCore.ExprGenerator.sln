@@ -20,6 +20,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EFCore.ExprGenerator.Tests", "tests\EFCore.ExprGenerator.Tests\EFCore.ExprGenerator.Tests.csproj", "{5FD89742-01B6-4293-B8F1-D28EE6E6AA76}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "example", "example", "{1D587995-D2B1-D47C-23B4-E8E972FA15E9}"
+	ProjectSection(SolutionItems) = preProject
+		examples\Directory.Build.props = examples\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EFCore.ExprGenerator.Sample", "examples\EFCore.ExprGenerator.Sample\EFCore.ExprGenerator.Sample.csproj", "{53B95D83-A669-4479-AAE5-A461EE7ADAA9}"
 EndProject
