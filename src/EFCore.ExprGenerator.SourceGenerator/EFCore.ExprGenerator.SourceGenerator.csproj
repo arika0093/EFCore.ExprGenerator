@@ -11,8 +11,6 @@
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
-  <!-- load external libraries -->
-  <!-- thanks https://github.com/dotnet/roslyn/discussions/47517#discussioncomment-3542590 -->
   <ItemGroup>
     <None
       Include="EFCore.ExprGenerator.SourceGenerator.props"
@@ -20,6 +18,8 @@
       PackagePath="build"
       Visible="false"
     />
+  </ItemGroup>
+  <ItemGroup>
     <None
       Include="EFCore.ExprGenerator.SourceGenerator.targets"
       Pack="true"

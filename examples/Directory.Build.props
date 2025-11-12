@@ -1,4 +1,8 @@
 <Project>
+  <PropertyGroup>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);EFCore.ExprGenerator</InterceptorsNamespaces>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\EFCore.ExprGenerator\EFCore.ExprGenerator.csproj" />
     <ProjectReference Include="..\..\src\EFCore.ExprGenerator.SourceGenerator\EFCore.ExprGenerator.SourceGenerator.csproj">
