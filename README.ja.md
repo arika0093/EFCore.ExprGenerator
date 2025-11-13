@@ -1,6 +1,7 @@
 # EFCore.ExprGenerator
 
-[![NuGet Version](https://img.shields.io/nuget/v/EFCore.ExprGenerator?style=flat-square&logo=NuGet&color=0080CC)](https://www.nuget.org/packages/EFCore.ExprGenerator/) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/arika0093/EFCore.ExprGenerator/test.yaml?branch=main&label=Test&style=flat-square) ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/arika0093/EFCore.ExprGenerator?style=flat-square)
+[![NuGet Version](https://img.shields.io/nuget/v/EFCore.ExprGenerator?style=flat-square&logo=NuGet&color=0080CC)](https://www.nuget.org/packages/EFCore.ExprGenerator/) ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/arika0093/EFCore.ExprGenerator/test.yaml?branch=main&label=Test&style=flat-square) ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/arika0093/EFCore.ExprGenerator?style=flat-square) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=arika0093_EFCore.ExprGenerator&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=arika0093_EFCore.ExprGenerator) [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=arika0093_EFCore.ExprGenerator&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=arika0093_EFCore.ExprGenerator)
+
 
 EntityFrameworkCore(EFCore)におけるSelectクエリの記述を簡潔にし、DTOクラスの自動生成・nullable式のサポートを提供します。
 
