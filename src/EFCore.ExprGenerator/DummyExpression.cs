@@ -1,34 +1,45 @@
 ﻿using System;
 using System.Linq;
 
-namespace EFCore.ExprGenerator;
-
-/// <summary>
-/// Dummy expression methods for EFCore.ExprGenerator to compile correctly.
-/// </summary>
-public static class DummyExpression
+namespace EFCore.ExprGenerator
 {
     /// <summary>
-    /// Dummy Select expression method for EFCore.ExprGenerator to compile correctly.
+    /// Dummy expression methods for EFCore.ExprGenerator to compile correctly.
     /// </summary>
-    public static IQueryable<TResult> SelectExpr<T, TResult>(
-        this IQueryable<T> query,
-        Func<T, TResult> selector
-    )
-        where T : class
+    public static class DummyExpression
     {
-        throw new NotImplementedException();
-    }
+        /// <summary>
+        /// Dummy Select expression method for EFCore.ExprGenerator to compile correctly.
+        /// </summary>
+        public static IQueryable<TResult> SelectExpr<T, TResult>(
+            this IQueryable<T> query,
+            Func<T, TResult> selector
+        )
+            where T : class
+        {
+            throw new NotImplementedException();
+        }
 
-    /// <summary>
-    /// Dummy Select expression method for EFCore.ExprGenerator to compile correctly.
-    /// </summary>
-    public static IQueryable<TResult> SelectExpr<T, TResult>(
-        this IQueryable<T> query,
-        Func<T, object> selector
-    )
-        where T : class
+        /// <summary>
+        /// Dummy Select expression method for EFCore.ExprGenerator to compile correctly.
+        /// </summary>
+        [global::System.Runtime.CompilerServices.OverloadResolutionPriority(-1)]
+        public static IQueryable<TResult> SelectExpr<T, TResult>(
+            this IQueryable<T> query,
+            Func<T, object> selector
+        )
+            where T : class
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
+
+#pragma warning disable
+namespace System.Runtime.CompilerServices
+{
+    file sealed class OverloadResolutionPriorityAttribute(int priority) : global::System.Attribute
     {
-        throw new NotImplementedException();
+        public int Priority { get; } = priority;
     }
 }
