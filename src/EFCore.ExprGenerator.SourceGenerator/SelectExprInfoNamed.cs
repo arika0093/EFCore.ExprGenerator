@@ -14,61 +14,49 @@ internal record SelectExprInfoNamed : SelectExprInfo
 {
     public required ObjectCreationExpressionSyntax ObjectCreation { get; init; }
 
-    public override DtoStructure GenerateDtoStructure()
+    // Generate DTO classes (including nested DTOs)
+    public override List<GenerateDtoClassInfo> GenerateDtoClasses() => [];
+
+    // Generate DTO structure for unique ID generation
+    protected override DtoStructure GenerateDtoStructure()
     {
         return DtoStructure.AnalyzeNamedType(ObjectCreation, SemanticModel, SourceType)!;
     }
 
-    public override string GenerateDtoClasses(DtoStructure structure, List<string> dtoClasses) =>
-        structure.SourceTypeName; // Return the original DTO type name, no ID needed
+    // Get DTO class name
+    protected override string GetClassName(DtoStructure structure) => structure.SourceTypeName;
 
-    public override string GetClassName(DtoStructure structure) => structure.SourceTypeName; // Return the original DTO type name
+    // Get parent DTO class name
+    protected override string GetParentDtoClassName(DtoStructure structure) =>
+        GetClassName(structure);
 
     protected override string GenerateSelectExprMethod(
         string dtoName,
         DtoStructure structure,
-        List<InterceptableLocation> locations
+        InterceptableLocation location
     )
     {
-        var namespaceName = GetNamespaceString();
-        // For named types, use the original DTO type name (passed as dtoName parameter)
-        var dtoFullName = $"global::{namespaceName}.{dtoName}";
         // Use SourceType for the query source (not the DTO return type)
         var querySourceTypeFullName = SourceType.ToDisplayString(
             SymbolDisplayFormat.FullyQualifiedFormat
         );
-
         // For named types, extract the original object creation expression
         // from the lambda and use it as-is
         var originalExpression = ObjectCreation.ToString();
 
         var sb = new StringBuilder();
-        foreach (var location in locations)
-        {
-            var id = GetUniqueId();
-            sb.AppendLine(GenerateMethodHeaderPart(dtoName, location));
-            sb.AppendLine($"    public static IQueryable<TResult> SelectExpr_{id}<T, TResult>(");
-            sb.AppendLine($"        this IQueryable<T> query,");
-            sb.AppendLine($"        Func<T, TResult> selector)");
-            sb.AppendLine("    {");
-            sb.AppendLine(
-                $"        var matchedQuery = query as object as IQueryable<{querySourceTypeFullName}>;"
-            );
-            sb.AppendLine(
-                $"        var converted = matchedQuery.Select(s => {originalExpression});"
-            );
-            sb.AppendLine($"        return converted as object as IQueryable<TResult>;");
-            sb.AppendLine("    }");
-        }
-
+        var id = GetUniqueId();
+        sb.AppendLine(GenerateMethodHeaderPart(dtoName, location));
+        sb.AppendLine($"public static IQueryable<TResult> SelectExpr_{id}<T, TResult>(");
+        sb.AppendLine($"    this IQueryable<T> query,");
+        sb.AppendLine($"    Func<T, TResult> selector)");
+        sb.AppendLine("    {");
+        sb.AppendLine(
+            $"    var matchedQuery = query as object as IQueryable<{querySourceTypeFullName}>;"
+        );
+        sb.AppendLine($"    var converted = matchedQuery.Select(s => {originalExpression});");
+        sb.AppendLine($"    return converted as object as IQueryable<TResult>;");
+        sb.AppendLine("}");
         return sb.ToString();
-    }
-
-    protected override string GetUsingNamespaceString()
-    {
-        return $"""
-            {base.GetUsingNamespaceString()}
-            using {GetNamespaceString()};
-            """;
     }
 }

@@ -62,27 +62,29 @@ public partial class SelectExprGenerator : IIncrementalGenerator
                 var infoWithoutNulls = infos.Where(info => info is not null).Select(info => info!);
 
                 // record locations by SelectExprInfo Id
-                var infoWithLocations = infoWithoutNulls
-                    .GroupBy(info => info.GetUniqueId())
+                var exprGroups = infoWithoutNulls
+                    .GroupBy(info => info.GetNamespaceString())
                     .Select(g =>
                     {
-                        var locations = g.Select(info =>
-                                info.SemanticModel.GetInterceptableLocation(info.Invocation)!
-                            )
-                            .ToList();
-                        return new SelectExprLocations
+                        var exprs = g.Select(info =>
                         {
-                            Id = g.Key,
-                            Info = g.First(),
-                            Locations = locations,
+                            var location = info.SemanticModel.GetInterceptableLocation(
+                                info.Invocation
+                            )!;
+                            return new SelectExprLocations { Info = info, Location = location };
+                        });
+                        return new SelectExprGroups
+                        {
+                            TargetNamespace = g.Key,
+                            Exprs = exprs.ToList(),
                         };
                     })
                     .ToList();
 
                 // Generate code for explicit DTO infos (one method per group)
-                foreach (var il in infoWithLocations)
+                foreach (var exprGroup in exprGroups)
                 {
-                    il.Info.GenerateCode(spc, il.Locations);
+                    exprGroup.GenerateCode(spc);
                 }
             }
         );
@@ -260,11 +262,4 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             TargetNamespace = targetNamespace,
         };
     }
-}
-
-internal class SelectExprLocations
-{
-    public required string Id { get; init; }
-    public required SelectExprInfo Info { get; init; }
-    public required List<InterceptableLocation> Locations { get; init; }
 }

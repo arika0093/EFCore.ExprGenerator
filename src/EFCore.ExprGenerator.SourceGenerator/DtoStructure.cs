@@ -112,7 +112,7 @@ internal record DtoStructure(ITypeSymbol SourceType, List<DtoProperty> Propertie
                 properties.Add(property);
             }
         }
-        return new DtoStructure(SourceType: targetType, Properties: properties);
+        return new DtoStructure(SourceType: sourceType, Properties: properties);
     }
 
     private static string? GetImplicitPropertyName(ExpressionSyntax expression)

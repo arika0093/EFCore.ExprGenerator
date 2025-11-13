@@ -17,77 +17,53 @@ internal abstract record SelectExprInfo
     public required SemanticModel SemanticModel { get; init; }
     public required InvocationExpressionSyntax Invocation { get; init; }
 
+    // Generate DTO classes (including nested DTOs)
+    public abstract List<GenerateDtoClassInfo> GenerateDtoClasses();
+
     // Generate DTO structure for unique ID generation
-    public abstract DtoStructure GenerateDtoStructure();
+    protected abstract DtoStructure GenerateDtoStructure();
 
     // Get DTO class name
-    public abstract string GetClassName(DtoStructure structure);
+    protected abstract string GetClassName(DtoStructure structure);
+
+    // Get parent DTO class name
+    protected abstract string GetParentDtoClassName(DtoStructure structure);
 
     // Generate SelectExpr method
     protected abstract string GenerateSelectExprMethod(
         string dtoName,
         DtoStructure structure,
-        List<InterceptableLocation> locations
+        InterceptableLocation location
     );
 
-    // Generate DTO classes
-    public abstract string GenerateDtoClasses(DtoStructure structure, List<string> dtoClasses);
-
-    // Get using namespace declarations
-    protected virtual string GetUsingNamespaceString()
+    // Generate SelectExpr codes for a given interceptable location
+    public List<string> GenerateSelectExprCodes(InterceptableLocation location)
     {
-        return """
-            using System;
-            using System.Linq;
-            using System.Collections.Generic;
-            """;
+        // Analyze anonymous type structure
+        var dtoStructure = GenerateDtoStructure();
+
+        // Skip if properties are empty
+        if (dtoStructure.Properties.Count == 0)
+            return [];
+
+        // Get root DTO class name
+        var mainDtoName = GetParentDtoClassName(dtoStructure);
+
+        // Generate SelectExpr method with interceptor attribute
+        var selectExprMethod = GenerateSelectExprMethod(mainDtoName, dtoStructure, location);
+
+        return [selectExprMethod];
     }
 
-    // Generate source code
-    public virtual void GenerateCode(
-        SourceProductionContext context,
-        List<InterceptableLocation> locations
-    )
+    // Get namespace string
+    public string GetNamespaceString()
     {
-        try
-        {
-            // Analyze anonymous type structure
-            var dtoStructure = GenerateDtoStructure();
-
-            // Skip if properties are empty
-            if (dtoStructure.Properties.Count == 0)
-                return;
-
-            // Generate DTO classes (including nested DTOs)
-            var dtoClasses = new List<string>();
-            var mainDtoName = GenerateDtoClasses(dtoStructure, dtoClasses);
-
-            // Generate SelectExpr method with interceptor attribute
-            var selectExprMethod = GenerateSelectExprMethod(mainDtoName, dtoStructure, locations);
-
-            // Build final source code
-            var sourceCode = BuildSourceCode(mainDtoName, dtoClasses, selectExprMethod);
-
-            // Register with Source Generator
-            var uniqueId = GetUniqueId();
-            context.AddSource($"GeneratedExpression_{uniqueId}.g.cs", sourceCode);
-        }
-        catch (Exception ex)
-        {
-            // Output error information for debugging
-            var errorMessage = $"""
-                /*
-                 * Source Generator Error: {ex.Message}
-                 * Stack Trace: {ex.StackTrace}
-                 */
-                """;
-            var hash = Guid.NewGuid().ToString("N")[..8];
-            context.AddSource($"GeneratorError_{hash}.g.cs", errorMessage);
-        }
+        var namespaceSymbol = SourceType.ContainingNamespace;
+        return namespaceSymbol?.ToDisplayString() ?? "Generated";
     }
 
     // Generate unique ID (including location information)
-    public string GetUniqueId()
+    protected string GetUniqueId()
     {
         var structureId = GenerateDtoStructure().GetUniqueId();
         var locationId = GetLocationId();
@@ -104,54 +80,14 @@ internal abstract record SelectExprInfo
         return BitConverter.ToString(hash).Replace("-", "")[..8]; // Use first 8 characters
     }
 
-    protected virtual string BuildSourceCode(
-        string mainDtoName,
-        List<string> dtoClasses,
-        string selectExprMethod
-    )
-    {
-        var sb = new StringBuilder();
-        sb.Append(
-            $$"""
-            {{GenerateFileHeaderPart()}}
-
-            namespace EFCore.ExprGenerator;
-            file static partial class GeneratedExpression
-            {
-            {{selectExprMethod}}
-            }
-            """
-        );
-        sb.AppendLine();
-        foreach (var dtoClass in dtoClasses)
-        {
-            sb.AppendLine(dtoClass);
-        }
-        return sb.ToString();
-    }
-
-    protected string GenerateFileHeaderPart()
-    {
-        return $"""
-            // <auto-generated />
-            #nullable enable
-            #pragma warning disable IDE0060
-            #pragma warning disable CS8601
-            #pragma warning disable CS8603
-            #pragma warning disable CS8604
-
-            {GetUsingNamespaceString()}
-            """;
-    }
-
     protected string GenerateMethodHeaderPart(string dtoName, InterceptableLocation location)
     {
         return $"""
-                /// <summary>
-                /// generated select expression method {dtoName} <br/>
-                /// at {location.GetDisplayLocation()}
-                /// </summary>
-                {location.GetInterceptsLocationAttributeSyntax()}
+            /// <summary>
+            /// generated select expression method {dtoName} <br/>
+            /// at {location.GetDisplayLocation()}
+            /// </summary>
+            {location.GetInterceptsLocationAttributeSyntax()}
             """;
     }
 
@@ -305,12 +241,6 @@ internal abstract record SelectExprInfo
             SpecialType.System_String => "string.Empty",
             _ => "default",
         };
-    }
-
-    protected string GetNamespaceString()
-    {
-        var namespaceSymbol = SourceType.ContainingNamespace;
-        return namespaceSymbol?.ToDisplayString() ?? "Generated";
     }
 
     protected string GetAccessibilityString(ITypeSymbol typeSymbol)

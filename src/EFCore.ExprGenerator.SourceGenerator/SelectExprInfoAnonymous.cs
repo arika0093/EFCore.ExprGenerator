@@ -14,54 +14,57 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
 {
     public required AnonymousObjectCreationExpressionSyntax AnonymousObject { get; init; }
 
-    public override DtoStructure GenerateDtoStructure()
+    // Generate DTO classes (including nested DTOs)
+    public override List<GenerateDtoClassInfo> GenerateDtoClasses() => [];
+
+    // Generate DTO structure for unique ID generation
+    protected override DtoStructure GenerateDtoStructure()
     {
         return DtoStructure.AnalyzeAnonymousType(AnonymousObject, SemanticModel, SourceType)!;
     }
 
-    public override string GenerateDtoClasses(DtoStructure structure, List<string> dtoClasses) =>
-        "";
+    // Get DTO class name
+    protected override string GetClassName(DtoStructure structure) => "";
 
+    // Get parent DTO class name
+    protected override string GetParentDtoClassName(DtoStructure structure) => "";
+
+    // Generate SelectExpr method
     protected override string GenerateSelectExprMethod(
         string dtoName,
         DtoStructure structure,
-        List<InterceptableLocation> locations
+        InterceptableLocation location
     )
     {
         var sourceTypeFullName = structure.SourceTypeFullName;
         var sb = new StringBuilder();
 
         var id = GetUniqueId();
-        foreach (var location in locations)
-        {
-            sb.AppendLine(GenerateMethodHeaderPart("anonymous type", location));
-            sb.AppendLine($"    public static IQueryable<TResult> SelectExpr_{id}<T, TResult>(");
-            sb.AppendLine($"        this IQueryable<T> query,");
-            sb.AppendLine($"        Func<T, TResult> selector");
-            sb.AppendLine($"    )");
-            sb.AppendLine($"    {{");
-            sb.AppendLine(
-                $"        var matchedQuery = query as object as IQueryable<{sourceTypeFullName}>;"
-            );
-            sb.AppendLine($"        var converted = matchedQuery.Select(s => new");
-            sb.AppendLine($"        {{");
+        sb.AppendLine(GenerateMethodHeaderPart("anonymous type", location));
+        sb.AppendLine($"public static IQueryable<TResult> SelectExpr_{id}<T, TResult>(");
+        sb.AppendLine($"    this IQueryable<T> query,");
+        sb.AppendLine($"    Func<T, TResult> selector");
+        sb.AppendLine($")");
+        sb.AppendLine($"{{");
+        sb.AppendLine(
+            $"    var matchedQuery = query as object as IQueryable<{sourceTypeFullName}>;"
+        );
+        sb.AppendLine($"    var converted = matchedQuery.Select(s => new");
+        sb.AppendLine($"    {{");
 
-            // Generate property assignments
-            var propertyAssignments = structure
-                .Properties.Select(prop =>
-                {
-                    var assignment = GeneratePropertyAssignment(prop, 12);
-                    return $"            {prop.Name} = {assignment}";
-                })
-                .ToList();
-            sb.AppendLine(string.Join($",\n", propertyAssignments));
-            sb.AppendLine("        });");
-            sb.AppendLine($"        return converted as object as IQueryable<TResult>;");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-        }
+        // Generate property assignments
+        var propertyAssignments = structure
+            .Properties.Select(prop =>
+            {
+                var assignment = GeneratePropertyAssignment(prop, 12);
+                return $"        {prop.Name} = {assignment}";
+            })
+            .ToList();
+        sb.AppendLine(string.Join($",\n", propertyAssignments));
+        sb.AppendLine("        });");
+        sb.AppendLine($"    return converted as object as IQueryable<TResult>;");
+        sb.AppendLine("}");
+        sb.AppendLine();
         return sb.ToString();
     }
-
-    public override string GetClassName(DtoStructure structure) => "";
 }

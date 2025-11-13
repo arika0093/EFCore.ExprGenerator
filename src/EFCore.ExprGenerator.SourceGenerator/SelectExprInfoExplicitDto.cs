@@ -17,50 +17,61 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     public required string ExplicitDtoName { get; init; }
     public required string TargetNamespace { get; init; }
 
-    public override DtoStructure GenerateDtoStructure()
+    // Generate DTO classes (including nested DTOs)
+    public override List<GenerateDtoClassInfo> GenerateDtoClasses()
+    {
+        var structure = GenerateDtoStructure();
+        var parentClassName = GetParentDtoClassName(structure);
+        return GenerateDtoClasses(structure, parentClassName);
+    }
+
+    private List<GenerateDtoClassInfo> GenerateDtoClasses(
+        DtoStructure structure,
+        string? overrideClassName = null
+    )
+    {
+        var result = new List<GenerateDtoClassInfo>();
+        var accessibility = GetAccessibilityString(SourceType);
+        var className = overrideClassName ?? GetClassName(structure);
+        var ns = GetNamespaceString();
+
+        foreach (var prop in structure.Properties)
+        {
+            if (prop.NestedStructure is not null)
+            {
+                // Recursively generate nested DTO classes
+                result.AddRange(GenerateDtoClasses(prop.NestedStructure));
+            }
+        }
+        // Generate current DTO class
+        var dtoClassInfo = new GenerateDtoClassInfo
+        {
+            Accessibility = accessibility,
+            Namespace = TargetNamespace,
+            ClassName = className,
+            Structure = structure,
+        };
+        result.Add(dtoClassInfo);
+        return result;
+    }
+
+    // Generate DTO structure for unique ID generation
+    protected override DtoStructure GenerateDtoStructure()
     {
         return DtoStructure.AnalyzeAnonymousType(AnonymousObject, SemanticModel, SourceType)!;
     }
 
-    public override string GenerateDtoClasses(DtoStructure structure, List<string> dtoClasses)
-    {
-        var accessibility = GetAccessibilityString(SourceType);
+    // Get DTO class name
+    protected override string GetClassName(DtoStructure structure) => structure.SourceTypeName;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"{accessibility} class {ExplicitDtoName}");
-        sb.AppendLine("{");
+    // Get parent DTO class name
+    protected override string GetParentDtoClassName(DtoStructure structure) => ExplicitDtoName;
 
-        foreach (var prop in structure.Properties)
-        {
-            var propertyType = prop.TypeName;
-
-            // For nested structures, recursively generate DTOs (add first)
-            if (prop.NestedStructure is not null)
-            {
-                // Extract the base type (e.g., IEnumerable from IEnumerable<T>)
-                var baseType = propertyType;
-                if (propertyType.Contains("<"))
-                {
-                    baseType = propertyType[..propertyType.IndexOf("<")];
-                }
-
-                var nestedDtoName = GenerateDtoClasses(prop.NestedStructure, dtoClasses);
-                propertyType = $"{baseType}<{nestedDtoName}>";
-            }
-            sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
-        }
-
-        sb.AppendLine("}");
-
-        // Add current DTO (nested DTOs are already added by recursive calls)
-        dtoClasses.Add(sb.ToString());
-        return ExplicitDtoName;
-    }
-
+    // Generate SelectExpr method
     protected override string GenerateSelectExprMethod(
         string dtoName,
         DtoStructure structure,
-        List<InterceptableLocation> locations
+        InterceptableLocation location
     )
     {
         var accessibility = GetAccessibilityString(SourceType);
@@ -68,83 +79,34 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         var dtoFullName = $"global::{TargetNamespace}.{dtoName}";
         var sb = new StringBuilder();
 
-        var count = 0;
-        foreach (var loc in locations)
-        {
-            count++;
-            var className = $"{dtoName}_{count:D4}";
-            var methodDecl =
-                $"public static IQueryable<TResult> SelectExpr_{className}<TIn, TResult>(";
-            sb.AppendLine($"    {accessibility} static partial class GeneratedExpression");
-            sb.AppendLine($"    {{");
-            sb.AppendLine($"        /// <summary>");
-            sb.AppendLine($"        /// generated select expression method {dtoName}");
-            sb.AppendLine($"        /// at {loc.GetDisplayLocation()}");
-            sb.AppendLine($"        /// </summary>");
-            sb.AppendLine($"        {loc.GetInterceptsLocationAttributeSyntax()}");
-            sb.AppendLine($"        {methodDecl}");
-            sb.AppendLine($"            this IQueryable<TIn> query,");
-            sb.AppendLine($"            Func<TIn, object> selector) where TResult : {dtoFullName}");
-            sb.AppendLine($"        {{");
-            sb.AppendLine(
-                $"            return (IQueryable<TResult>)(object)((IQueryable<{sourceTypeFullName}>)(object)query).Select(s => new {dtoFullName}"
-            );
-            sb.AppendLine($"            {{");
+        var id = GetUniqueId();
+        var methodDecl = $"public static IQueryable<TResult> SelectExpr_{id}<TIn, TResult>(";
+        sb.AppendLine($"/// <summary>");
+        sb.AppendLine($"/// generated select expression method {dtoName}");
+        sb.AppendLine($"/// at {location.GetDisplayLocation()}");
+        sb.AppendLine($"/// </summary>");
+        sb.AppendLine($"{location.GetInterceptsLocationAttributeSyntax()}");
+        sb.AppendLine($"{methodDecl}");
+        sb.AppendLine($"    this IQueryable<TIn> query,");
+        sb.AppendLine($"    Func<TIn, object> selector) where TResult : {dtoFullName}");
+        sb.AppendLine($"{{");
+        sb.AppendLine(
+            $"    return (IQueryable<TResult>)(object)((IQueryable<{sourceTypeFullName}>)(object)query).Select(s => new {dtoFullName}"
+        );
+        sb.AppendLine($"    {{");
 
-            // Generate property assignments
-            var propertyAssignments = structure
-                .Properties.Select(prop =>
-                {
-                    var assignment = GeneratePropertyAssignment(prop, 12);
-                    return $"                {prop.Name} = {assignment}";
-                })
-                .ToList();
-            sb.AppendLine(string.Join($",\n", propertyAssignments));
+        // Generate property assignments
+        var propertyAssignments = structure
+            .Properties.Select(prop =>
+            {
+                var assignment = GeneratePropertyAssignment(prop, 12);
+                return $"        {prop.Name} = {assignment}";
+            })
+            .ToList();
+        sb.AppendLine(string.Join($",\n", propertyAssignments));
 
-            sb.AppendLine($"            }});");
-            sb.AppendLine($"        }}");
-            sb.AppendLine($"    }}");
-        }
-        return sb.ToString();
-    }
-
-    public override string GetClassName(DtoStructure structure) => ExplicitDtoName;
-
-    protected override string BuildSourceCode(
-        string mainDtoName,
-        List<string> dtoClasses,
-        string selectExprMethod
-    )
-    {
-        var accessibility = GetAccessibilityString(SourceType);
-        var sb = new StringBuilder();
-        sb.AppendLine(GenerateFileHeaderPart());
-        sb.AppendLine();
-
-        // EFCore.ExprGenerator namespace for the SelectExpr method
-        var indentedMethod = string.Join("\n", selectExprMethod.Split('\n'));
-        sb.AppendLine("namespace EFCore.ExprGenerator");
-        sb.AppendLine("{");
-        sb.AppendLine(indentedMethod);
-        sb.AppendLine("}");
-        sb.AppendLine();
-
-        // Add DTO classes in the target namespace
-        sb.AppendLine($"namespace {TargetNamespace}");
-        sb.AppendLine("{");
-        foreach (var dtoClass in dtoClasses)
-        {
-            // Indent the DTO class
-            var indentedClass = string.Join(
-                "\n",
-                dtoClass
-                    .Split('\n')
-                    .Select(line => string.IsNullOrWhiteSpace(line) ? line : "    " + line)
-            );
-            sb.AppendLine(indentedClass);
-        }
-        sb.AppendLine("}");
-
+        sb.AppendLine($"    }});");
+        sb.AppendLine($"}}");
         return sb.ToString();
     }
 }
