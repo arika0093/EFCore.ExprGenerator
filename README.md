@@ -99,11 +99,10 @@ public class OrderItemDto
 
 EFCore.ExprGenerator is a Roslyn Source Generator that addresses the problems above. Using this library you can write concise selectors with null-propagation and optionally generate DTO classes automatically.
 
-Example with auto-generated DTOs and null-propagation support:
-
 ```csharp
 using EFCore.ExprGenerator;
 
+// 💮 auto-generated DTOs, with null-propagation support
 var orders = await dbContext.Orders
     // Order: input entity type
     // OrderDto: output DTO type (auto-generated)
