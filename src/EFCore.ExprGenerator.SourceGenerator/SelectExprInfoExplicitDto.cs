@@ -75,7 +75,8 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     {
         // Determine if this is a global namespace (same logic as SelectExprGroups.IsGlobalNamespace)
         var sourceNamespace = GetNamespaceString();
-        var isGlobalNamespace = string.IsNullOrEmpty(sourceNamespace) || sourceNamespace.Contains("<");
+        var isGlobalNamespace =
+            string.IsNullOrEmpty(sourceNamespace) || sourceNamespace.Contains("<");
 
         if (isGlobalNamespace)
         {

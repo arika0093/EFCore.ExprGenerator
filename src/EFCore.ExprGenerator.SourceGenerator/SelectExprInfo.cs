@@ -94,10 +94,16 @@ internal abstract record SelectExprInfo
     protected string GeneratePropertyAssignment(DtoProperty property, int indents)
     {
         var expression = property.OriginalExpression;
+        var syntax = property.OriginalSyntax;
+
         // For nested Select (collection) case
         if (property.NestedStructure is not null)
         {
-            var converted = ConvertNestedSelect(expression, property.NestedStructure, indents);
+            var converted = ConvertNestedSelectWithRoslyn(
+                syntax,
+                property.NestedStructure,
+                indents
+            );
             // Debug: Check if conversion was performed correctly
             if (converted == expression && expression.Contains("Select"))
             {
@@ -107,12 +113,205 @@ internal abstract record SelectExprInfo
             return converted;
         }
         // If nullable operator is used, convert to explicit null check
-        if (property.IsNullable && expression.Contains("?."))
+        if (
+            property.IsNullable
+            && syntax.DescendantNodesAndSelf().OfType<ConditionalAccessExpressionSyntax>().Any()
+        )
         {
-            return ConvertNullableAccessToExplicitCheck(expression, property.TypeSymbol);
+            return ConvertNullableAccessToExplicitCheckWithRoslyn(syntax, property.TypeSymbol);
         }
         // Regular property access
         return expression;
+    }
+
+    protected string ConvertNestedSelectWithRoslyn(
+        ExpressionSyntax syntax,
+        DtoStructure nestedStructure,
+        int indents
+    )
+    {
+        var spaces = new string(' ', indents);
+        var nestedDtoName = GetClassName(nestedStructure);
+
+        // Use Roslyn to extract Select information
+        var selectInfo = ExtractSelectInfoFromSyntax(syntax);
+        if (selectInfo is null)
+        {
+            // Fallback to string representation
+            return syntax.ToString();
+        }
+
+        var (baseExpression, paramName, chainedMethods, hasNullableAccess, coalescingDefaultValue) =
+            selectInfo.Value;
+
+        // Generate property assignments for nested DTO
+        var propertyAssignments = new List<string>();
+        foreach (var prop in nestedStructure.Properties)
+        {
+            var assignment = GeneratePropertyAssignment(prop, indents + 4);
+            propertyAssignments.Add($"{spaces}    {prop.Name} = {assignment},");
+        }
+        var propertiesCode = string.Join("\n", propertyAssignments);
+
+        // Build the Select expression
+        if (hasNullableAccess)
+        {
+            // Determine default value
+            var defaultValue =
+                coalescingDefaultValue
+                ?? (
+                    string.IsNullOrEmpty(nestedDtoName)
+                        ? "null"
+                        : $"System.Linq.Enumerable.Empty<{nestedDtoName}>()"
+                );
+
+            var code = $$"""
+                {{baseExpression}} != null ? {{baseExpression}}.Select({{paramName}} => new {{nestedDtoName}} {
+                {{propertiesCode}}
+                {{spaces}}}){{chainedMethods}} : {{defaultValue}}
+                """;
+            return code;
+        }
+        else
+        {
+            var code = $$"""
+                {{baseExpression}}.Select({{paramName}} => new {{nestedDtoName}} {
+                {{propertiesCode}}
+                {{spaces}}}){{chainedMethods}}
+                """;
+            return code;
+        }
+    }
+
+    private (
+        string baseExpression,
+        string paramName,
+        string chainedMethods,
+        bool hasNullableAccess,
+        string? coalescingDefaultValue
+    )? ExtractSelectInfoFromSyntax(ExpressionSyntax syntax)
+    {
+        string? coalescingDefaultValue = null;
+        var currentSyntax = syntax;
+
+        // Check for coalescing operator (??)
+        if (
+            syntax is BinaryExpressionSyntax
+            {
+                RawKind: (int)SyntaxKind.CoalesceExpression
+            } binaryExpr
+        )
+        {
+            var rightSide = binaryExpr.Right.ToString().Trim();
+            coalescingDefaultValue = rightSide == "[]" ? null : rightSide;
+            currentSyntax = binaryExpr.Left;
+        }
+
+        // Check for conditional access (?.Select)
+        bool hasNullableAccess = false;
+        ConditionalAccessExpressionSyntax? conditionalAccess = null;
+        if (currentSyntax is ConditionalAccessExpressionSyntax condAccess)
+        {
+            hasNullableAccess = true;
+            conditionalAccess = condAccess;
+            currentSyntax = condAccess.WhenNotNull;
+        }
+
+        // Find the Select invocation
+        InvocationExpressionSyntax? selectInvocation = null;
+        string chainedMethods = "";
+
+        if (currentSyntax is InvocationExpressionSyntax invocation)
+        {
+            // Check if this is .Select() or .Select().ToList()
+            if (
+                invocation.Expression is MemberAccessExpressionSyntax memberAccess
+                && memberAccess.Name.Identifier.Text == "Select"
+            )
+            {
+                selectInvocation = invocation;
+            }
+            else if (
+                invocation.Expression is MemberBindingExpressionSyntax memberBinding
+                && memberBinding.Name.Identifier.Text == "Select"
+            )
+            {
+                selectInvocation = invocation;
+            }
+            else if (invocation.Expression is MemberAccessExpressionSyntax chainedMember)
+            {
+                // This is a chained method like .ToList()
+                chainedMethods = $".{chainedMember.Name}{invocation.ArgumentList}";
+                if (chainedMember.Expression is InvocationExpressionSyntax innerInvocation)
+                {
+                    if (
+                        innerInvocation.Expression is MemberAccessExpressionSyntax innerMember
+                        && innerMember.Name.Identifier.Text == "Select"
+                    )
+                    {
+                        selectInvocation = innerInvocation;
+                    }
+                    else if (
+                        innerInvocation.Expression is MemberBindingExpressionSyntax innerBinding
+                        && innerBinding.Name.Identifier.Text == "Select"
+                    )
+                    {
+                        selectInvocation = innerInvocation;
+                    }
+                }
+            }
+        }
+
+        if (selectInvocation is null)
+            return null;
+
+        // Extract lambda parameter name using Roslyn
+        string paramName = "x"; // Default
+        if (selectInvocation.ArgumentList.Arguments.Count > 0)
+        {
+            var arg = selectInvocation.ArgumentList.Arguments[0].Expression;
+            if (arg is SimpleLambdaExpressionSyntax simpleLambda)
+            {
+                paramName = simpleLambda.Parameter.Identifier.Text;
+            }
+            else if (
+                arg is ParenthesizedLambdaExpressionSyntax parenLambda
+                && parenLambda.ParameterList.Parameters.Count > 0
+            )
+            {
+                paramName = parenLambda.ParameterList.Parameters[0].Identifier.Text;
+            }
+        }
+
+        // Extract base expression (the collection being selected from)
+        string baseExpression;
+        if (hasNullableAccess && conditionalAccess is not null)
+        {
+            baseExpression = conditionalAccess.Expression.ToString();
+        }
+        else if (selectInvocation.Expression is MemberAccessExpressionSyntax selectMember)
+        {
+            baseExpression = selectMember.Expression.ToString();
+        }
+        else if (
+            selectInvocation.Expression is MemberBindingExpressionSyntax
+            && conditionalAccess is not null
+        )
+        {
+            baseExpression = conditionalAccess.Expression.ToString();
+        }
+        else
+        {
+            return null;
+        }
+
+        return (
+            baseExpression,
+            paramName,
+            chainedMethods,
+            hasNullableAccess,
+            coalescingDefaultValue
+        );
     }
 
     protected string ConvertNestedSelect(
@@ -264,6 +463,61 @@ internal abstract record SelectExprInfo
                 """;
             return code;
         }
+    }
+
+    protected string ConvertNullableAccessToExplicitCheckWithRoslyn(
+        ExpressionSyntax syntax,
+        ITypeSymbol typeSymbol
+    )
+    {
+        // Example: c.Child?.Id → c.Child != null ? (int?)c.Child.Id : null
+        // Example: s.Child3?.Child?.Id → s.Child3 != null && s.Child3.Child != null ? (int?)s.Child3.Child.Id : null
+
+        // Use Roslyn to verify this uses conditional access
+        var hasConditionalAccess = syntax
+            .DescendantNodesAndSelf()
+            .OfType<ConditionalAccessExpressionSyntax>()
+            .Any();
+
+        if (!hasConditionalAccess)
+            return syntax.ToString();
+
+        // For now, use the original string-based implementation since it works
+        // The Roslyn check above ensures we only call this when appropriate
+        var expression = syntax.ToString();
+
+        // Build the access path without ?. operators
+        var accessPath = expression.Replace("?.", ".");
+
+        // Build null checks using string manipulation (proven to work)
+        var checks = new List<string>();
+        var parts = expression.Split(["?."], StringSplitOptions.None);
+
+        if (parts.Length < 2)
+            return expression;
+
+        // All parts except the first require null checks
+        var currentPath = parts[0];
+        for (int i = 1; i < parts.Length; i++)
+        {
+            checks.Add($"{currentPath} != null");
+            // Get the first token (property name) of the next part
+            var nextPart = parts[i];
+            var dotIndex = nextPart.IndexOf('.');
+            var propertyName = dotIndex > 0 ? nextPart[..dotIndex] : nextPart;
+            currentPath = $"{currentPath}.{propertyName}";
+        }
+
+        if (checks.Count == 0)
+            return expression;
+
+        // Build null checks
+        var nullCheckPart = string.Join(" && ", checks);
+        var typeSymbolValue = typeSymbol.ToDisplayString();
+        var nullableTypeName = typeSymbolValue != "?" ? $"({typeSymbolValue})" : "";
+        var defaultValue = GetDefaultValueForType(typeSymbol);
+
+        return $"{nullCheckPart} ? {nullableTypeName}{accessPath} : {defaultValue}";
     }
 
     protected string ConvertNullableAccessToExplicitCheck(string expression, ITypeSymbol typeSymbol)

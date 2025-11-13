@@ -20,7 +20,7 @@ public class Worker(IDbContextFactory<SampleDbContext> dbContextFactory, ILogger
 
             // get sample data
             var sample = await dbContext
-                .SampleClasses.SelectExpr(s => new
+                .SampleClasses.SelectExpr<SampleClass, SampleClassDto>(s => new
                 {
                     s.Id,
                     s.Foo,
@@ -40,15 +40,6 @@ public class Worker(IDbContextFactory<SampleDbContext> dbContextFactory, ILogger
                     Child3ChildGrault = s.Child3?.Child?.Grault,
                 })
                 .FirstOrDefaultAsync(stoppingToken);
-
-            // var sample2 = await dbContext
-            //     .SampleClasses.SelectExpr<SampleClass, SampleClassSimpleDto>(s => new
-            //     {
-            //         s.Id,
-            //         s.Foo,
-            //         s.Bar,
-            //     })
-            //     .FirstOrDefaultAsync(stoppingToken);
 
             logger.LogInformation(
                 "Sample data retrieved: {Sample}",
