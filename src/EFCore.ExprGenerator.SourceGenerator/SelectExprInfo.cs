@@ -178,8 +178,8 @@ internal abstract record SelectExprInfo
 
     protected string ConvertNullableAccessToExplicitCheck(string expression, ITypeSymbol typeSymbol)
     {
-        // Example: c.Child?.Id → c.Child != null ? c.Child.Id : null
-        // Example: s.Child3?.Child?.Id → s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null
+        // Example: c.Child?.Id → c.Child != null ? (int?)c.Child.Id : null
+        // Example: s.Child3?.Child?.Id → s.Child3 != null && s.Child3.Child != null ? (int?)s.Child3.Child.Id : null
         if (!expression.Contains("?."))
             return expression;
         // Replace ?. with . to create the actual access path
