@@ -116,7 +116,7 @@ var orders = await dbContext.Orders
         {
             ProductName = oi.Product?.Name,
             Quantity = oi.Quantity
-        })
+        }) ?? [],
     })
     .ToListAsync();
 ```
