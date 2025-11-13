@@ -18,7 +18,7 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     public required string TargetNamespace { get; init; }
 
     // Store multiple locations that should be intercepted by this same method
-    public List<InterceptableLocation> Locations { get; init; } = new();
+    public List<InterceptableLocation> Locations { get; init; } = [];
 
     public override DtoStructure GenerateDtoStructure()
     {
@@ -91,16 +91,10 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         sb.AppendLine();
 
         // EFCore.ExprGenerator namespace for the SelectExpr method
+        var indentedMethod = string.Join("\n", selectExprMethod.Split('\n'));
         sb.AppendLine("namespace EFCore.ExprGenerator");
         sb.AppendLine("{");
-        sb.AppendLine($"    {accessibility} static partial class GeneratedExpression_{mainDtoName}");
-        sb.AppendLine("    {");
-
-        // Indent the selectExprMethod by 4 spaces
-        var indentedMethod = string.Join("\n", selectExprMethod.Split('\n').Select(line => "    " + line));
         sb.AppendLine(indentedMethod);
-
-        sb.AppendLine("    }");
         sb.AppendLine("}");
         sb.AppendLine();
 
@@ -110,7 +104,12 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         foreach (var dtoClass in dtoClasses)
         {
             // Indent the DTO class
-            var indentedClass = string.Join("\n", dtoClass.Split('\n').Select(line => string.IsNullOrWhiteSpace(line) ? line : "    " + line));
+            var indentedClass = string.Join(
+                "\n",
+                dtoClass
+                    .Split('\n')
+                    .Select(line => string.IsNullOrWhiteSpace(line) ? line : "    " + line)
+            );
             sb.AppendLine(indentedClass);
         }
         sb.AppendLine("}");
@@ -141,8 +140,7 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
 
             // Generate unique ID (from namespace, DTO name, and structure hash)
             var structureHash = dtoStructure.GetUniqueId();
-            var uniqueId =
-                $"{TargetNamespace.Replace(".", "_")}_{ExplicitDtoName}_{structureHash}";
+            var uniqueId = $"{TargetNamespace.Replace(".", "_")}_{ExplicitDtoName}_{structureHash}";
 
             // Generate DTO classes (including nested DTOs)
             var dtoClasses = new List<string>();
@@ -181,53 +179,47 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         List<InterceptableLocation> locations
     )
     {
+        var accessibility = GetAccessibilityString(SourceType);
         var sourceTypeFullName = structure.SourceTypeFullName;
         var dtoFullName = $"global::{TargetNamespace}.{dtoName}";
-
         var sb = new StringBuilder();
 
-        // Add all interceptor attributes
-        sb.AppendLine($"    /// <summary>");
-        sb.AppendLine($"    /// generated select expression method {dtoName}");
+        var count = 0;
         foreach (var loc in locations)
         {
-            sb.AppendLine($"    /// at {loc.GetDisplayLocation()}");
+            count++;
+            var className = $"{dtoName}_{count:D4}";
+            var classDecl = $"static partial class GeneratedExpression_{className}";
+            sb.AppendLine($"    {accessibility} {classDecl}");
+            sb.AppendLine($"    {{");
+            sb.AppendLine($"        /// <summary>");
+            sb.AppendLine($"        /// generated select expression method {dtoName}");
+            sb.AppendLine($"        /// at {loc.GetDisplayLocation()}");
+            sb.AppendLine($"        /// </summary>");
+            sb.AppendLine($"        {loc.GetInterceptsLocationAttributeSyntax()}");
+            sb.AppendLine($"        public static IQueryable<TResult> SelectExpr<TIn, TResult>(");
+            sb.AppendLine($"            this IQueryable<TIn> query,");
+            sb.AppendLine($"            Func<TIn, object> selector) where TResult : {dtoFullName}");
+            sb.AppendLine($"        {{");
+            sb.AppendLine(
+                $"            return (IQueryable<TResult>)(object)((IQueryable<{sourceTypeFullName}>)(object)query).Select(s => new {dtoFullName}"
+            );
+            sb.AppendLine($"            {{");
+
+            // Generate property assignments
+            var propertyAssignments = structure
+                .Properties.Select(prop =>
+                {
+                    var assignment = GeneratePropertyAssignment(prop, 12);
+                    return $"                {prop.Name} = {assignment}";
+                })
+                .ToList();
+            sb.AppendLine(string.Join($",\n", propertyAssignments));
+
+            sb.AppendLine($"            }});");
+            sb.AppendLine($"        }}");
+            sb.AppendLine($"    }}");
         }
-        sb.AppendLine($"    /// </summary>");
-
-        foreach (var loc in locations)
-        {
-            sb.AppendLine($"    {loc.GetInterceptsLocationAttributeSyntax()}");
-        }
-
-        sb.AppendLine(
-            $"    public static IQueryable<TResult> SelectExpr<TIn, TResult>(this IQueryable<TIn> query, Func<TIn, object> selector) where TResult : {dtoFullName}"
-        );
-        sb.AppendLine($"    {{");
-        sb.AppendLine($"        if (typeof(TResult) == typeof({dtoFullName}))");
-        sb.AppendLine($"        {{");
-        sb.AppendLine(
-            $"            return (IQueryable<TResult>)(object)((IQueryable<{sourceTypeFullName}>)(object)query).Select(s => new {dtoFullName}"
-        );
-        sb.AppendLine($"            {{");
-
-        // Generate property assignments
-        var propertyAssignments = structure
-            .Properties.Select(prop =>
-            {
-                var assignment = GeneratePropertyAssignment(prop, 16);
-                return $"                {prop.Name} = {assignment}";
-            })
-            .ToList();
-        sb.AppendLine(string.Join($",\n", propertyAssignments));
-
-        sb.AppendLine($"            }});");
-        sb.AppendLine($"        }}");
-        sb.AppendLine(
-            $"        throw new NotImplementedException(\"This should be intercepted by the source generator\");"
-        );
-        sb.AppendLine($"    }}");
-
         return sb.ToString();
     }
 }
