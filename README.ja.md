@@ -195,7 +195,7 @@ namespace Tutorial
 ### インストール
 `EFCore.ExprGenerator`をNuGetからインストールします。
 
-```
+```bash
 dotnet add package EFCore.ExprGenerator --prerelease
 ```
 
