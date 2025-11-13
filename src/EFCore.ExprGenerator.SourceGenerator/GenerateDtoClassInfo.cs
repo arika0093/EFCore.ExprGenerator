@@ -22,7 +22,7 @@ internal class GenerateDtoClassInfo
     public string BuildCode()
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"{Accessibility} class {ClassName}");
+        sb.AppendLine($"{Accessibility} partial class {ClassName}");
         sb.AppendLine("{");
 
         foreach (var prop in Structure.Properties)
@@ -42,7 +42,8 @@ internal class GenerateDtoClassInfo
                 }
 
                 // Try to find nested class info by full name match
-                var nestedClassName = $"{nestStructure.SourceTypeName}Dto_{nestStructure.GetUniqueId()}";
+                var nestedClassName =
+                    $"{nestStructure.SourceTypeName}Dto_{nestStructure.GetUniqueId()}";
                 var containedNestClasses = NestedClasses.FirstOrDefault(nc =>
                     nc.ClassName == nestedClassName
                 );
