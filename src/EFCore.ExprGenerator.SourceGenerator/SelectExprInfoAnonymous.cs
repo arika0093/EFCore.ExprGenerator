@@ -63,7 +63,8 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
     )
     {
         // force override to use "Anonymous" as dto name
-        return base.BuildSourceCode("Anonymous", dtoClasses, selectExprMethod);
+        var id = GetUniqueId();
+        return base.BuildSourceCode($"Anonymous_{id}", dtoClasses, selectExprMethod);
     }
 
     protected override string GenerateSelectExprMethod(

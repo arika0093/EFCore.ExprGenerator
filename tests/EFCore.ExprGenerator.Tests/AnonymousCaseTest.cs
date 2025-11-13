@@ -41,15 +41,15 @@ public class AnonymousCaseTest
         first.FullName.ShouldBe("John | Doe");
     }
 
-    private static readonly List<SimpleClass> SampleData =
+    private static readonly List<AnonymousTestClass> SampleData =
     [
-        new SimpleClass
+        new AnonymousTestClass
         {
             Id = 1,
             FirstName = "John",
             LastName = "Doe",
         },
-        new SimpleClass
+        new AnonymousTestClass
         {
             Id = 2,
             FirstName = "Jane",
@@ -57,7 +57,7 @@ public class AnonymousCaseTest
         },
     ];
 
-    internal class SimpleClass
+    internal class AnonymousTestClass
     {
         public int Id { get; set; }
         public string FirstName { get; set; } = "";

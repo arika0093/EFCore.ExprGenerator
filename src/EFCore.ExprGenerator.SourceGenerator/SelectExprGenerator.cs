@@ -111,10 +111,22 @@ public partial class SelectExprGenerator : IIncrementalGenerator
                 var dict = new Dictionary<string, SelectExprInfo>();
                 foreach (var info in otherInfos)
                 {
-                    var structureId = info.GenerateDtoStructure().GetUniqueId();
+                    var structureId = info.GetUniqueId();
                     if (!dict.ContainsKey(structureId))
                     {
                         dict.Add(structureId, info);
+                    }
+                    else
+                    {
+                        // export error file
+                        spc.AddSource(
+                            $"Error_SelectExpr_Duplicate_{structureId}.g.cs",
+                            $"""
+                            // Error: Duplicate SelectExpr invocation with identical DTO structure detected.
+                            // This may cause conflicts in generated method names.
+                            // Please ensure that each SelectExpr usage has a unique DTO structure.
+                            """
+                        );
                     }
                 }
 
@@ -288,9 +300,7 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             .OfType<BaseNamespaceDeclarationSyntax>()
             .FirstOrDefault();
         var targetNamespace =
-            namespaceDecl?.Name.ToString()
-            ?? semanticModel.Compilation.AssemblyName
-            ?? "Generated";
+            namespaceDecl?.Name.ToString() ?? semanticModel.Compilation.AssemblyName ?? "Generated";
 
         return new SelectExprInfoExplicitDto
         {

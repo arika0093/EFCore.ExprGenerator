@@ -59,9 +59,6 @@ internal abstract record SelectExprInfo
             if (dtoStructure.Properties.Count == 0)
                 return;
 
-            // Generate unique ID (from hash of property structure and first location)
-            var uniqueId = GetUniqueId(location);
-
             // Generate DTO classes (including nested DTOs)
             var dtoClasses = new List<string>();
             var mainDtoName = GenerateDtoClasses(dtoStructure, dtoClasses);
@@ -73,6 +70,7 @@ internal abstract record SelectExprInfo
             var sourceCode = BuildSourceCode(mainDtoName, dtoClasses, selectExprMethod);
 
             // Register with Source Generator
+            var uniqueId = GetUniqueId();
             context.AddSource($"GeneratedExpression_{uniqueId}.g.cs", sourceCode);
         }
         catch (Exception ex)
@@ -90,11 +88,21 @@ internal abstract record SelectExprInfo
     }
 
     // Generate unique ID (including location information)
-    public string GetUniqueId(InterceptableLocation location)
+    public string GetUniqueId()
     {
         var structureId = GenerateDtoStructure().GetUniqueId();
-        var locationId = location.Data.GetHashCode().ToString("X8");
+        var locationId = GetLocationId();
         return $"{structureId}_{locationId}";
+    }
+
+    protected string GetLocationId()
+    {
+        var location =
+            SemanticModel.GetInterceptableLocation(Invocation)
+            ?? throw new InvalidOperationException("Failed to get interceptable location.");
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(location.Data));
+        return BitConverter.ToString(hash).Replace("-", "")[..8]; // Use first 8 characters
     }
 
     protected virtual string BuildSourceCode(
