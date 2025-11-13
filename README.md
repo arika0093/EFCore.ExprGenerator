@@ -250,6 +250,7 @@ public class OrderDto { /* ... */ }
 
 > [!TIP]
 > If you want to use the auto-generated type information, you can navigate to the generated code (for example via F12 in your editor) by placing the cursor on the `OrderDto` class.
+> and then you can copy it or use it as you like.
 
 > [!NOTE]
 > Although the repository name contains "EFCore", the library has no runtime dependency on EF Core and can be used with any IQueryable provider that supports projection.
