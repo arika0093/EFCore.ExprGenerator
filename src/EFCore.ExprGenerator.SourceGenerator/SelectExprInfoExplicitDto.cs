@@ -91,7 +91,6 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         InterceptableLocation location
     )
     {
-        var accessibility = GetAccessibilityString(SourceType);
         var sourceTypeFullName = structure.SourceTypeFullName;
         var actualNamespace = GetActualDtoNamespace();
         var dtoFullName = $"global::{actualNamespace}.{dtoName}";
