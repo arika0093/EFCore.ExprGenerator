@@ -17,9 +17,6 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     public required string ExplicitDtoName { get; init; }
     public required string TargetNamespace { get; init; }
 
-    // Store multiple locations that should be intercepted by this same method
-    public List<InterceptableLocation> Locations { get; init; } = [];
-
     public override DtoStructure GenerateDtoStructure()
     {
         return DtoStructure.AnalyzeAnonymousType(AnonymousObject, SemanticModel, SourceType)!;
@@ -61,114 +58,6 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     }
 
     protected override string GenerateSelectExprMethod(
-        string dtoName,
-        DtoStructure structure,
-        InterceptableLocation location
-    )
-    {
-        // This method is not used directly; we override GenerateCode instead
-        throw new NotImplementedException(
-            "Use GenerateCode override for SelectExprInfoExplicitDto"
-        );
-    }
-
-    public override string GetClassName(DtoStructure structure) => ExplicitDtoName;
-
-    protected override string BuildSourceCode(
-        string mainDtoName,
-        List<string> dtoClasses,
-        string selectExprMethod
-    )
-    {
-        var accessibility = GetAccessibilityString(SourceType);
-        var sb = new StringBuilder();
-        sb.AppendLine(GenerateFileHeaderPart());
-        sb.AppendLine();
-
-        // EFCore.ExprGenerator namespace for the SelectExpr method
-        var indentedMethod = string.Join("\n", selectExprMethod.Split('\n'));
-        sb.AppendLine("namespace EFCore.ExprGenerator");
-        sb.AppendLine("{");
-        sb.AppendLine(indentedMethod);
-        sb.AppendLine("}");
-        sb.AppendLine();
-
-        // Add DTO classes in the target namespace
-        sb.AppendLine($"namespace {TargetNamespace}");
-        sb.AppendLine("{");
-        foreach (var dtoClass in dtoClasses)
-        {
-            // Indent the DTO class
-            var indentedClass = string.Join(
-                "\n",
-                dtoClass
-                    .Split('\n')
-                    .Select(line => string.IsNullOrWhiteSpace(line) ? line : "    " + line)
-            );
-            sb.AppendLine(indentedClass);
-        }
-        sb.AppendLine("}");
-
-        return sb.ToString();
-    }
-
-    public override void GenerateCode(SourceProductionContext context)
-    {
-        try
-        {
-            var location =
-                SemanticModel.GetInterceptableLocation(Invocation)
-                ?? throw new InvalidOperationException("Failed to get interceptable location.");
-
-            // Add current location to the list
-            if (!Locations.Contains(location))
-            {
-                Locations.Add(location);
-            }
-
-            // Analyze anonymous type structure
-            var dtoStructure = GenerateDtoStructure();
-
-            // Skip if properties are empty
-            if (dtoStructure.Properties.Count == 0)
-                return;
-
-            // Generate unique ID (from namespace, DTO name, and structure hash)
-            var structureHash = dtoStructure.GetUniqueId();
-            var uniqueId = $"{TargetNamespace.Replace(".", "_")}_{ExplicitDtoName}_{structureHash}";
-
-            // Generate DTO classes (including nested DTOs)
-            var dtoClasses = new List<string>();
-            var mainDtoName = GenerateDtoClasses(dtoStructure, dtoClasses);
-
-            // Generate SelectExpr method with interceptor attributes (for all locations)
-            var selectExprMethod = GenerateSelectExprMethodWithLocations(
-                mainDtoName,
-                dtoStructure,
-                Locations
-            );
-
-            // Build final source code
-            var sourceCode = BuildSourceCode(mainDtoName, dtoClasses, selectExprMethod);
-
-            // Register with Source Generator
-            context.AddSource($"GeneratedExpression_{uniqueId}.g.cs", sourceCode);
-        }
-        catch (Exception ex)
-        {
-            // Output error information for debugging
-            var errorMessage = $"""
-                /*
-                 * Source Generator Error: {ex.Message}
-                 * Stack Trace: {ex.StackTrace}
-                 */
-                """;
-            var hash = Guid.NewGuid().ToString("N")[..8];
-            context.AddSource($"GeneratorError_{hash}.g.cs", errorMessage);
-        }
-    }
-
-    private string GenerateSelectExprMethodWithLocations(
         string dtoName,
         DtoStructure structure,
         List<InterceptableLocation> locations
@@ -216,6 +105,46 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
             sb.AppendLine($"        }}");
             sb.AppendLine($"    }}");
         }
+        return sb.ToString();
+    }
+
+    public override string GetClassName(DtoStructure structure) => ExplicitDtoName;
+
+    protected override string BuildSourceCode(
+        string mainDtoName,
+        List<string> dtoClasses,
+        string selectExprMethod
+    )
+    {
+        var accessibility = GetAccessibilityString(SourceType);
+        var sb = new StringBuilder();
+        sb.AppendLine(GenerateFileHeaderPart());
+        sb.AppendLine();
+
+        // EFCore.ExprGenerator namespace for the SelectExpr method
+        var indentedMethod = string.Join("\n", selectExprMethod.Split('\n'));
+        sb.AppendLine("namespace EFCore.ExprGenerator");
+        sb.AppendLine("{");
+        sb.AppendLine(indentedMethod);
+        sb.AppendLine("}");
+        sb.AppendLine();
+
+        // Add DTO classes in the target namespace
+        sb.AppendLine($"namespace {TargetNamespace}");
+        sb.AppendLine("{");
+        foreach (var dtoClass in dtoClasses)
+        {
+            // Indent the DTO class
+            var indentedClass = string.Join(
+                "\n",
+                dtoClass
+                    .Split('\n')
+                    .Select(line => string.IsNullOrWhiteSpace(line) ? line : "    " + line)
+            );
+            sb.AppendLine(indentedClass);
+        }
+        sb.AppendLine("}");
+
         return sb.ToString();
     }
 }

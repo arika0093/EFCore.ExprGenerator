@@ -27,7 +27,7 @@ internal abstract record SelectExprInfo
     protected abstract string GenerateSelectExprMethod(
         string dtoName,
         DtoStructure structure,
-        InterceptableLocation location
+        List<InterceptableLocation> locations
     );
 
     // Generate DTO classes
@@ -44,14 +44,13 @@ internal abstract record SelectExprInfo
     }
 
     // Generate source code
-    public virtual void GenerateCode(SourceProductionContext context)
+    public virtual void GenerateCode(
+        SourceProductionContext context,
+        List<InterceptableLocation> locations
+    )
     {
         try
         {
-            var location =
-                SemanticModel.GetInterceptableLocation(Invocation)
-                ?? throw new InvalidOperationException("Failed to get interceptable location.");
-
             // Analyze anonymous type structure
             var dtoStructure = GenerateDtoStructure();
 
@@ -63,8 +62,8 @@ internal abstract record SelectExprInfo
             var dtoClasses = new List<string>();
             var mainDtoName = GenerateDtoClasses(dtoStructure, dtoClasses);
 
-            // Generate SelectExpr method with interceptor attribute (using only first location)
-            var selectExprMethod = GenerateSelectExprMethod(mainDtoName, dtoStructure, location);
+            // Generate SelectExpr method with interceptor attribute
+            var selectExprMethod = GenerateSelectExprMethod(mainDtoName, dtoStructure, locations);
 
             // Build final source code
             var sourceCode = BuildSourceCode(mainDtoName, dtoClasses, selectExprMethod);

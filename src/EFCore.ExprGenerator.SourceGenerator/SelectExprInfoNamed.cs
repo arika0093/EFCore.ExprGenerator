@@ -27,7 +27,7 @@ internal record SelectExprInfoNamed : SelectExprInfo
     protected override string GenerateSelectExprMethod(
         string dtoName,
         DtoStructure structure,
-        InterceptableLocation location
+        List<InterceptableLocation> locations
     )
     {
         var namespaceName = GetNamespaceString();
@@ -43,19 +43,23 @@ internal record SelectExprInfoNamed : SelectExprInfo
         var originalExpression = ObjectCreation.ToString();
 
         var sb = new StringBuilder();
-
-        var id = GetUniqueId();
-        sb.AppendLine(GenerateMethodHeaderPart(dtoName, location));
-        sb.AppendLine($"    public static IQueryable<TResult> SelectExpr_{id}<T, TResult>(");
-        sb.AppendLine($"        this IQueryable<T> query,");
-        sb.AppendLine($"        Func<T, TResult> selector)");
-        sb.AppendLine("    {");
-        sb.AppendLine(
-            $"        var matchedQuery = query as object as IQueryable<{querySourceTypeFullName}>;"
-        );
-        sb.AppendLine($"        var converted = matchedQuery.Select(s => {originalExpression});");
-        sb.AppendLine($"        return converted as object as IQueryable<TResult>;");
-        sb.AppendLine("    }");
+        foreach (var location in locations)
+        {
+            var id = GetUniqueId();
+            sb.AppendLine(GenerateMethodHeaderPart(dtoName, location));
+            sb.AppendLine($"    public static IQueryable<TResult> SelectExpr_{id}<T, TResult>(");
+            sb.AppendLine($"        this IQueryable<T> query,");
+            sb.AppendLine($"        Func<T, TResult> selector)");
+            sb.AppendLine("    {");
+            sb.AppendLine(
+                $"        var matchedQuery = query as object as IQueryable<{querySourceTypeFullName}>;"
+            );
+            sb.AppendLine(
+                $"        var converted = matchedQuery.Select(s => {originalExpression});"
+            );
+            sb.AppendLine($"        return converted as object as IQueryable<TResult>;");
+            sb.AppendLine("    }");
+        }
 
         return sb.ToString();
     }

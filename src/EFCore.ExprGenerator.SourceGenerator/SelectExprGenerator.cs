@@ -59,82 +59,30 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             invocations,
             (spc, infos) =>
             {
-                // Separate explicit DTO infos from others
-                var explicitDtoInfos = new List<SelectExprInfoExplicitDto>();
-                var otherInfos = new List<SelectExprInfo>();
+                var infoWithoutNulls = infos.Where(info => info is not null).Select(info => info!);
 
-                foreach (var info in infos)
-                {
-                    if (info is null)
-                        continue;
-
-                    if (info is SelectExprInfoExplicitDto explicitInfo)
+                // record locations by SelectExprInfo Id
+                var infoWithLocations = infoWithoutNulls
+                    .GroupBy(info => info.GetUniqueId())
+                    .Select(g =>
                     {
-                        explicitDtoInfos.Add(explicitInfo);
-                    }
-                    else
-                    {
-                        otherInfos.Add(info);
-                    }
-                }
-
-                // Group explicit DTO infos by namespace + DTO name + structure
-                var explicitDtoGroups = new Dictionary<string, SelectExprInfoExplicitDto>();
-                foreach (var info in explicitDtoInfos)
-                {
-                    var structureHash = info.GenerateDtoStructure().GetUniqueId();
-                    var groupKey = $"{info.TargetNamespace}|{info.ExplicitDtoName}|{structureHash}";
-
-                    if (explicitDtoGroups.TryGetValue(groupKey, out var existing))
-                    {
-                        // Add this location to the existing info
-                        var location = info.SemanticModel.GetInterceptableLocation(info.Invocation);
-                        if (location is not null && !existing.Locations.Contains(location))
+                        var locations = g.Select(info =>
+                                info.SemanticModel.GetInterceptableLocation(info.Invocation)!
+                            )
+                            .ToList();
+                        return new SelectExprLocations
                         {
-                            existing.Locations.Add(location);
-                        }
-                    }
-                    else
-                    {
-                        explicitDtoGroups.Add(groupKey, info);
-                    }
-                }
+                            Id = g.Key,
+                            Info = g.First(),
+                            Locations = locations,
+                        };
+                    })
+                    .ToList();
 
                 // Generate code for explicit DTO infos (one method per group)
-                foreach (var kvp in explicitDtoGroups)
+                foreach (var il in infoWithLocations)
                 {
-                    var info = kvp.Value;
-                    info.GenerateCode(spc);
-                }
-
-                // Group other infos by DTO structure (traditional behavior)
-                var dict = new Dictionary<string, SelectExprInfo>();
-                foreach (var info in otherInfos)
-                {
-                    var structureId = info.GetUniqueId();
-                    if (!dict.ContainsKey(structureId))
-                    {
-                        dict.Add(structureId, info);
-                    }
-                    else
-                    {
-                        // export error file
-                        spc.AddSource(
-                            $"Error_SelectExpr_Duplicate_{structureId}.g.cs",
-                            $"""
-                            // Error: Duplicate SelectExpr invocation with identical DTO structure detected.
-                            // This may cause conflicts in generated method names.
-                            // Please ensure that each SelectExpr usage has a unique DTO structure.
-                            """
-                        );
-                    }
-                }
-
-                // Generate code for each unique structure (traditional behavior)
-                foreach (var kvp in dict)
-                {
-                    var info = kvp.Value;
-                    info.GenerateCode(spc);
+                    il.Info.GenerateCode(spc, il.Locations);
                 }
             }
         );
@@ -312,4 +260,11 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             TargetNamespace = targetNamespace,
         };
     }
+}
+
+internal class SelectExprLocations
+{
+    public required string Id { get; init; }
+    public required SelectExprInfo Info { get; init; }
+    public required List<InterceptableLocation> Locations { get; init; }
 }
