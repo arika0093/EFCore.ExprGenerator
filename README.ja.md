@@ -156,6 +156,9 @@ var orders = await dbContext.Orders
         // ...
     })
     .ToListAsync();
+
+// your existing DTO class
+public class OrderDto { /* ... */ }
 ```
 
 ジェネリクスを指定せずに匿名型を渡した場合、そのまま匿名型が返されます。
@@ -170,7 +173,7 @@ var orders = await dbContext.Orders
     })
     .ToListAsync();
 var firstOrder = orders.First();
-Console.WriteLine(firstOrder.GetType().Name); // -> anonymous type
+Console.WriteLine(firstOrder.GetType().Name); // anonymous type
 ```
 
 ## ライセンス

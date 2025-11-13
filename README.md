@@ -155,6 +155,9 @@ var orders = await dbContext.Orders
         // ...
     })
     .ToListAsync();
+
+// your existing DTO class
+public class OrderDto { /* ... */ }
 ```
 
 If you pass an anonymous type without specifying generics, the anonymous type is returned as is.
