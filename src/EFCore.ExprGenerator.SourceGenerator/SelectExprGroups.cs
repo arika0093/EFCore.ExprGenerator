@@ -9,12 +9,32 @@ namespace EFCore.ExprGenerator;
 
 internal class SelectExprGroups
 {
-    public required string TargetNamespace { get; set; }
-
     public required List<SelectExprLocations> Exprs { get; set; }
+
+    public required string TargetNamespace
+    {
+        get
+        {
+            if (IsGlobalNamespace)
+            {
+                return "EFCore.ExprGenerator";
+            }
+            return targetNamespace;
+        }
+        set => targetNamespace = value.Trim();
+    }
+    private string targetNamespace = "";
+
+    // Determine if the target namespace is global (empty or compiler-generated)
+    private bool IsGlobalNamespace =>
+        string.IsNullOrEmpty(targetNamespace) || targetNamespace.Contains("<");
 
     public string GetUniqueId()
     {
+        if (IsGlobalNamespace)
+        {
+            return "Global";
+        }
         return TargetNamespace.Replace('.', '_');
     }
 

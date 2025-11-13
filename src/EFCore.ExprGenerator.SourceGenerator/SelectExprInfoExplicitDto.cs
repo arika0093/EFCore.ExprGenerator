@@ -69,6 +69,21 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     // Get parent DTO class name
     protected override string GetParentDtoClassName(DtoStructure structure) => ExplicitDtoName;
 
+    // Get the actual namespace where the DTO will be placed
+    // This mirrors the logic in SelectExprGroups.TargetNamespace getter
+    private string GetActualDtoNamespace()
+    {
+        // Determine if this is a global namespace (same logic as SelectExprGroups.IsGlobalNamespace)
+        var sourceNamespace = GetNamespaceString();
+        var isGlobalNamespace = string.IsNullOrEmpty(sourceNamespace) || sourceNamespace.Contains("<");
+
+        if (isGlobalNamespace)
+        {
+            return "EFCore.ExprGenerator";
+        }
+        return TargetNamespace;
+    }
+
     // Generate SelectExpr method
     protected override string GenerateSelectExprMethod(
         string dtoName,
@@ -78,7 +93,8 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     {
         var accessibility = GetAccessibilityString(SourceType);
         var sourceTypeFullName = structure.SourceTypeFullName;
-        var dtoFullName = $"global::{TargetNamespace}.{dtoName}";
+        var actualNamespace = GetActualDtoNamespace();
+        var dtoFullName = $"global::{actualNamespace}.{dtoName}";
         var sb = new StringBuilder();
 
         var id = GetUniqueId();
