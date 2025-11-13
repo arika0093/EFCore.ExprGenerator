@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace EFCore.ExprGenerator;
@@ -11,6 +14,8 @@ internal class GenerateDtoClassInfo
     public required string ClassName { get; set; }
 
     public required string Namespace { get; set; }
+
+    public required ImmutableList<GenerateDtoClassInfo> NestedClasses { get; set; }
 
     public string FullName => $"{Namespace}.{ClassName}";
 
@@ -27,15 +32,25 @@ internal class GenerateDtoClassInfo
             // For nested structures, recursively generate DTOs (add first)
             if (prop.NestedStructure is not null)
             {
-                // Extract the base type (e.g., IEnumerable from IEnumerable<T>)
+                var nestStructure = prop.NestedStructure;
+                var containedNestClasses = NestedClasses.FirstOrDefault(nc =>
+                    nc.Structure == nestStructure
+                );
                 var baseType = propertyType;
                 if (propertyType.Contains("<"))
                 {
                     baseType = propertyType[..propertyType.IndexOf("<")];
                 }
-
-                var nestedDtoName = prop.NestedStructure.SourceTypeName;
-                propertyType = $"{baseType}<{nestedDtoName}>";
+                if (containedNestClasses is not null)
+                {
+                    propertyType = $"{baseType}<{containedNestClasses.FullName}>";
+                }
+                else
+                {
+                    // Extract the base type (e.g., IEnumerable from IEnumerable<T>)
+                    var nestedDtoName = prop.NestedStructure.SourceTypeName;
+                    propertyType = $"{baseType}<{nestedDtoName}>";
+                }
             }
             sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
         }

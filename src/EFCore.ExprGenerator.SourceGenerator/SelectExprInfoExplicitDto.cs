@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -33,7 +34,6 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         var result = new List<GenerateDtoClassInfo>();
         var accessibility = GetAccessibilityString(SourceType);
         var className = overrideClassName ?? GetClassName(structure);
-        var ns = GetNamespaceString();
 
         foreach (var prop in structure.Properties)
         {
@@ -50,6 +50,7 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
             Namespace = TargetNamespace,
             ClassName = className,
             Structure = structure,
+            NestedClasses = [.. result],
         };
         result.Add(dtoClassInfo);
         return result;
@@ -62,7 +63,8 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     }
 
     // Get DTO class name
-    protected override string GetClassName(DtoStructure structure) => $"{structure.SourceTypeName}Dto_{structure.GetUniqueId()}";
+    protected override string GetClassName(DtoStructure structure) =>
+        $"{structure.SourceTypeName}Dto_{structure.GetUniqueId()}";
 
     // Get parent DTO class name
     protected override string GetParentDtoClassName(DtoStructure structure) => ExplicitDtoName;
@@ -101,7 +103,7 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
             .Properties.Select(prop =>
             {
                 var assignment = GeneratePropertyAssignment(prop, 8);
-                return $"    {prop.Name} = {assignment}";
+                return $"        {prop.Name} = {assignment}";
             })
             .ToList();
         sb.AppendLine(string.Join($",\n", propertyAssignments));
