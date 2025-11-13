@@ -97,7 +97,7 @@ internal abstract record SelectExprInfo
         return $"{structureId}_{locationId}";
     }
 
-    protected string BuildSourceCode(
+    protected virtual string BuildSourceCode(
         string mainDtoName,
         List<string> dtoClasses,
         string selectExprMethod

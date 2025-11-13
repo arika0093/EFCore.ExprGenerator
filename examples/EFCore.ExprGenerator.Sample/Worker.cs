@@ -20,7 +20,7 @@ public class Worker(IDbContextFactory<SampleDbContext> dbContextFactory, ILogger
 
             // get sample data
             var sample = await dbContext
-                .SampleClasses.SelectExpr(s => new
+                .SampleClasses.SelectExpr<SampleClass, SampleClassFullDto>(s => new
                 {
                     s.Id,
                     s.Foo,
@@ -42,7 +42,7 @@ public class Worker(IDbContextFactory<SampleDbContext> dbContextFactory, ILogger
                 .FirstOrDefaultAsync(stoppingToken);
 
             var sample2 = await dbContext
-                .SampleClasses.SelectExpr(s => new
+                .SampleClasses.SelectExpr<SampleClass, SampleClassSimpleDto>(s => new
                 {
                     Id = s.Id,
                     Foo = s.Foo,

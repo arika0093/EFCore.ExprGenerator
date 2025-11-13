@@ -10,11 +10,15 @@ public class SimpleCaseTest
     {
         var converted = Case1Data
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " " + s.LastName })
+            .SelectExpr<Simple1, Case1Dto>(s => new
+            {
+                s.Id,
+                FullName = s.FirstName + " " + s.LastName,
+            })
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().Name.ShouldContain("Simple1Dto_");
+        first.GetType().Name.ShouldBe("Case1Dto");
         first.Id.ShouldBe(1);
         first.FullName.ShouldBe("John Doe");
     }
@@ -24,11 +28,15 @@ public class SimpleCaseTest
     {
         var converted = Case1Data
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " + " + s.LastName })
+            .SelectExpr<Simple1, Case1OtherDto>(s => new
+            {
+                s.Id,
+                FullName = s.FirstName + " + " + s.LastName,
+            })
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().Name.ShouldContain("Simple1Dto_");
+        first.GetType().Name.ShouldBe("Case1OtherDto");
         first.Id.ShouldBe(1);
         first.FullName.ShouldBe("John + Doe");
     }
@@ -40,11 +48,15 @@ public class SimpleCaseTest
             .AsQueryable()
             .Where(s => s.Id > 0)
             .OrderBy(s => s.LastName)
-            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " " + s.LastName })
+            .SelectExpr<Simple1, Case1ManyLinqMethodsDto>(s => new
+            {
+                s.Id,
+                FullName = s.FirstName + " " + s.LastName,
+            })
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().Name.ShouldContain("Simple1Dto_");
+        first.GetType().Name.ShouldBe("Case1ManyLinqMethodsDto");
         first.Id.ShouldBe(1);
         first.FullName.ShouldBe("John Doe");
     }
@@ -90,7 +102,7 @@ public class SimpleCaseTest
     {
         var converted = Case2Data
             .AsQueryable()
-            .SelectExpr(s => new
+            .SelectExpr<Simple2, Case2AutoDto>(s => new
             {
                 s.Id,
                 ItemCount = s.ItemList.Count,
@@ -99,7 +111,7 @@ public class SimpleCaseTest
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().Name.ShouldContain("Simple2Dto_");
+        first.GetType().Name.ShouldBe("Case2AutoDto");
         first.Id.ShouldBe(1);
         first.ItemCount.ShouldBe(3);
         first.NumberSum.ShouldBe(6);
@@ -112,7 +124,7 @@ public class SimpleCaseTest
             .AsQueryable()
             .Where(s => s.Id > 0)
             .OrderBy(s => s.Id)
-            .SelectExpr(s => new
+            .SelectExpr<Simple2ManyLinqMethods, Case2ManyLinqMethodsAutoDto>(s => new
             {
                 s.Id,
                 ItemCount = s.ItemList.Where(i => i != "C").Count(),
@@ -121,7 +133,7 @@ public class SimpleCaseTest
             .ToList();
         converted.Count.ShouldBe(2);
         var first = converted[0];
-        first.GetType().Name.ShouldContain("Simple2ManyLinqMethodsDto_");
+        first.GetType().Name.ShouldBe("Case2ManyLinqMethodsAutoDto");
         first.Id.ShouldBe(1);
         first.ItemCount.ShouldBe(2);
         first.NumberSum.ShouldBe(2);

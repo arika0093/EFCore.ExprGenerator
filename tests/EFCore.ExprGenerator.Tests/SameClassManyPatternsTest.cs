@@ -22,7 +22,11 @@ public class SameClassManyPatternsTest
     {
         var converted = Datas
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " " + s.LastName })
+            .SelectExpr<SimpleClass, DefaultDto>(s => new
+            {
+                s.Id,
+                FullName = s.FirstName + " " + s.LastName,
+            })
             .ToList();
         converted[0].FullName.ShouldBe("Alice Smith");
     }
@@ -32,7 +36,11 @@ public class SameClassManyPatternsTest
     {
         var converted = Datas
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " + " + s.LastName })
+            .SelectExpr<SimpleClass, Custom1Dto>(s => new
+            {
+                s.Id,
+                FullName = s.FirstName + " + " + s.LastName,
+            })
             .ToList();
         converted[0].FullName.ShouldBe("Alice + Smith");
     }
@@ -42,7 +50,11 @@ public class SameClassManyPatternsTest
     {
         var converted = Datas
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, FullName = s.FirstName + " - " + s.LastName })
+            .SelectExpr<SimpleClass, Custom2Dto>(s => new
+            {
+                s.Id,
+                FullName = s.FirstName + " - " + s.LastName,
+            })
             .ToList();
         converted[0].FullName.ShouldBe("Alice - Smith");
     }
@@ -52,7 +64,11 @@ public class SameClassManyPatternsTest
     {
         var converted = Datas
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, ScorePlusAge = s.Score + s.Age })
+            .SelectExpr<SimpleClass, AnotherOutput1Dto>(s => new
+            {
+                s.Id,
+                ScorePlusAge = s.Score + s.Age,
+            })
             .ToList();
         converted[0].ScorePlusAge.ShouldBe(115); // 85 + 30
     }
@@ -62,7 +78,11 @@ public class SameClassManyPatternsTest
     {
         var converted = Datas
             .AsQueryable()
-            .SelectExpr(s => new { s.Id, ScorePlusAge = s.Score - s.Age })
+            .SelectExpr<SimpleClass, AnotherOutput2Dto>(s => new
+            {
+                s.Id,
+                ScorePlusAge = s.Score - s.Age,
+            })
             .ToList();
         converted[0].ScorePlusAge.ShouldBe(55); // 85 - 30
     }

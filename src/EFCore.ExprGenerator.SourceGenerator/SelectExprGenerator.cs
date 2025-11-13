@@ -59,12 +59,58 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             invocations,
             (spc, infos) =>
             {
-                // Group infos by DTO structure
-                var dict = new Dictionary<string, SelectExprInfo>();
+                // Separate explicit DTO infos from others
+                var explicitDtoInfos = new List<SelectExprInfoExplicitDto>();
+                var otherInfos = new List<SelectExprInfo>();
+
                 foreach (var info in infos)
                 {
                     if (info is null)
                         continue;
+
+                    if (info is SelectExprInfoExplicitDto explicitInfo)
+                    {
+                        explicitDtoInfos.Add(explicitInfo);
+                    }
+                    else
+                    {
+                        otherInfos.Add(info);
+                    }
+                }
+
+                // Group explicit DTO infos by namespace + DTO name + structure
+                var explicitDtoGroups = new Dictionary<string, SelectExprInfoExplicitDto>();
+                foreach (var info in explicitDtoInfos)
+                {
+                    var structureHash = info.GenerateDtoStructure().GetUniqueId();
+                    var groupKey = $"{info.TargetNamespace}|{info.ExplicitDtoName}|{structureHash}";
+
+                    if (explicitDtoGroups.TryGetValue(groupKey, out var existing))
+                    {
+                        // Add this location to the existing info
+                        var location = info.SemanticModel.GetInterceptableLocation(info.Invocation);
+                        if (location is not null && !existing.Locations.Contains(location))
+                        {
+                            existing.Locations.Add(location);
+                        }
+                    }
+                    else
+                    {
+                        explicitDtoGroups.Add(groupKey, info);
+                    }
+                }
+
+                // Generate code for explicit DTO infos (one method per group)
+                foreach (var kvp in explicitDtoGroups)
+                {
+                    var info = kvp.Value;
+                    info.GenerateCode(spc);
+                }
+
+                // Group other infos by DTO structure (traditional behavior)
+                var dict = new Dictionary<string, SelectExprInfo>();
+                foreach (var info in otherInfos)
+                {
                     var structureId = info.GenerateDtoStructure().GetUniqueId();
                     if (!dict.ContainsKey(structureId))
                     {
@@ -72,7 +118,7 @@ public partial class SelectExprGenerator : IIncrementalGenerator
                     }
                 }
 
-                // Generate code for each unique structure
+                // Generate code for each unique structure (traditional behavior)
                 foreach (var kvp in dict)
                 {
                     var info = kvp.Value;
@@ -109,6 +155,21 @@ public partial class SelectExprGenerator : IIncrementalGenerator
         var lambdaArg = invocation.ArgumentList.Arguments[0].Expression;
         if (lambdaArg is not LambdaExpressionSyntax lambda)
             return null;
+
+        // Check if this is a generic invocation with explicit type arguments
+        // SelectExpr<TIn, TResult> form
+        if (
+            invocation.Expression is MemberAccessExpressionSyntax memberAccess
+            && memberAccess.Name is GenericNameSyntax genericName
+            && genericName.TypeArgumentList.Arguments.Count == 2
+        )
+        {
+            // This is the new SelectExpr<TIn, TResult> form
+            if (lambda.Body is AnonymousObjectCreationExpressionSyntax anon)
+            {
+                return GetExplicitDtoSelectExprInfo(context, anon, genericName);
+            }
+        }
 
         // Check if lambda body is an object initializer
         var body = lambda.Body;
@@ -182,6 +243,63 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             ObjectCreation = obj,
             SemanticModel = semanticModel,
             Invocation = invocation,
+        };
+    }
+
+    private static SelectExprInfoExplicitDto? GetExplicitDtoSelectExprInfo(
+        GeneratorSyntaxContext context,
+        AnonymousObjectCreationExpressionSyntax anonymousObj,
+        GenericNameSyntax genericName
+    )
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
+        var semanticModel = context.SemanticModel;
+
+        // Get target type from MemberAccessExpression
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+            return null;
+
+        // Get type information
+        var typeInfo = semanticModel.GetTypeInfo(memberAccess.Expression);
+        if (typeInfo.Type is not INamedTypeSymbol namedType)
+            return null;
+
+        // Get TIn from IQueryable<TIn>
+        var sourceType = namedType.TypeArguments.FirstOrDefault();
+        if (sourceType is null)
+            return null;
+
+        // Get TResult (second type parameter) - this is the explicit DTO name
+        var typeArguments = genericName.TypeArgumentList.Arguments;
+        if (typeArguments.Count != 2)
+            return null;
+
+        var tResultType = semanticModel.GetTypeInfo(typeArguments[1]).Type;
+        if (tResultType is null)
+            return null;
+
+        var explicitDtoName = tResultType.Name;
+
+        // Get the namespace of the calling code
+        var invocationSyntaxTree = invocation.SyntaxTree;
+        var root = invocationSyntaxTree.GetRoot();
+        var namespaceDecl = invocation
+            .Ancestors()
+            .OfType<BaseNamespaceDeclarationSyntax>()
+            .FirstOrDefault();
+        var targetNamespace =
+            namespaceDecl?.Name.ToString()
+            ?? semanticModel.Compilation.AssemblyName
+            ?? "Generated";
+
+        return new SelectExprInfoExplicitDto
+        {
+            SourceType = sourceType,
+            AnonymousObject = anonymousObj,
+            SemanticModel = semanticModel,
+            Invocation = invocation,
+            ExplicitDtoName = explicitDtoName,
+            TargetNamespace = targetNamespace,
         };
     }
 }
