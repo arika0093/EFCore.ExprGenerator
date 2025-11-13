@@ -16,14 +16,14 @@ public class TutorialCaseTest
             .SelectExpr(s => new
             {
                 Id = s.Id,
-                //CustomerName = s.Customer?.Name,
+                CustomerName = s.Customer?.Name,
                 CustomerCountry = s.Customer?.Address?.Country?.Name,
                 CustomerCity = s.Customer?.Address?.City?.Name,
-                //    Items = s.OrderItems?.Select(oi => new
-                //    {
-                //        ProductName = oi.Product?.Name,
-                //        Quantity = oi.Quantity,
-                //    }) ?? [],
+                Items = s.OrderItems?.Select(oi => new
+                {
+                    ProductName = oi.Product?.Name,
+                    Quantity = oi.Quantity,
+                }) ?? [],
             })
             .ToList();
     }
@@ -38,14 +38,14 @@ public class TutorialCaseTest
             .SelectExpr<Order, OrderDto>(s => new
             {
                 Id = s.Id,
-                //CustomerName = s.Customer?.Name,
+                CustomerName = s.Customer?.Name,
                 CustomerCountry = s.Customer?.Address?.Country?.Name,
                 CustomerCity = s.Customer?.Address?.City?.Name,
-                //Items = s.OrderItems?.Select(oi => new
-                //{
-                //    ProductName = oi.Product?.Name,
-                //    Quantity = oi.Quantity,
-                //}) ?? [],
+                Items = s.OrderItems?.Select(oi => new
+                {
+                    ProductName = oi.Product?.Name,
+                    Quantity = oi.Quantity,
+                }) ?? [],
             })
             .ToList();
     }

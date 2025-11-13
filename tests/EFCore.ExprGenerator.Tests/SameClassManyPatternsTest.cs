@@ -95,10 +95,10 @@ public class SameClassManyPatternsTest
             .SelectExpr<SimpleClass, AnotherOutput2Dto>(s => new
             {
                 s.Id,
-                ScorePlusAge = s.Score - s.Age,
+                ScoreMinusAge = s.Score - s.Age,
             })
             .ToList();
-        converted[0].ScorePlusAge.ShouldBe(55); // 85 - 30
+        converted[0].ScoreMinusAge.ShouldBe(55); // 85 - 30
     }
 
     internal class SimpleClass

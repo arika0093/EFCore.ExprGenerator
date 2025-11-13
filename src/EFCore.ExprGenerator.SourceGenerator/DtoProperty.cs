@@ -47,26 +47,36 @@ internal record DtoProperty(
                 )
                 {
                     // Get collection element type from the Select's source
+                    ITypeSymbol? collectionType = null;
+
+                    if (selectInvocation.Expression is MemberAccessExpressionSyntax selectMemberAccess)
+                    {
+                        collectionType = semanticModel.GetTypeInfo(selectMemberAccess.Expression).Type;
+                    }
+                    else if (selectInvocation.Expression is MemberBindingExpressionSyntax)
+                    {
+                        // For conditional access (?.Select), we need to find the base expression
+                        // Look for ConditionalAccessExpressionSyntax in ancestors
+                        var conditionalAccess = expression.DescendantNodesAndSelf()
+                            .OfType<ConditionalAccessExpressionSyntax>()
+                            .FirstOrDefault();
+                        if (conditionalAccess is not null)
+                        {
+                            collectionType = semanticModel.GetTypeInfo(conditionalAccess.Expression).Type;
+                        }
+                    }
+
                     if (
-                        selectInvocation.Expression
-                        is MemberAccessExpressionSyntax selectMemberAccess
+                        collectionType is INamedTypeSymbol namedCollectionType
+                        && namedCollectionType.TypeArguments.Length > 0
                     )
                     {
-                        var collectionType = semanticModel
-                            .GetTypeInfo(selectMemberAccess.Expression)
-                            .Type;
-                        if (
-                            collectionType is INamedTypeSymbol namedCollectionType
-                            && namedCollectionType.TypeArguments.Length > 0
-                        )
-                        {
-                            var elementType = namedCollectionType.TypeArguments[0];
-                            nestedStructure = DtoStructure.AnalyzeAnonymousType(
-                                nestedAnonymous,
-                                semanticModel,
-                                elementType
-                            );
-                        }
+                        var elementType = namedCollectionType.TypeArguments[0];
+                        nestedStructure = DtoStructure.AnalyzeAnonymousType(
+                            nestedAnonymous,
+                            semanticModel,
+                            elementType
+                        );
                     }
                 }
             }
@@ -89,6 +99,37 @@ internal record DtoProperty(
 
     private static InvocationExpressionSyntax? FindSelectInvocation(ExpressionSyntax expression)
     {
+        // Handle binary expressions (e.g., ?? operator): s.OrderItems?.Select(...) ?? []
+        if (expression is Microsoft.CodeAnalysis.CSharp.Syntax.BinaryExpressionSyntax binaryExpr)
+        {
+            // Check left side for Select invocation
+            var leftResult = FindSelectInvocation(binaryExpr.Left);
+            if (leftResult is not null)
+                return leftResult;
+        }
+
+        // Handle conditional access (?.): s.OrderItems?.Select(...)
+        if (expression is Microsoft.CodeAnalysis.CSharp.Syntax.ConditionalAccessExpressionSyntax conditionalAccess)
+        {
+            // The WhenNotNull part contains the actual method call
+            return FindSelectInvocation(conditionalAccess.WhenNotNull);
+        }
+
+        // Handle member binding expression (part of ?. expression): .Select(...)
+        if (expression is Microsoft.CodeAnalysis.CSharp.Syntax.MemberBindingExpressionSyntax)
+        {
+            // This is the .Select part of ?.Select - we need to look at the parent
+            return null;
+        }
+
+        // Handle invocation binding expression (part of ?. expression): Select(...)
+        if (expression is Microsoft.CodeAnalysis.CSharp.Syntax.InvocationExpressionSyntax invocationBinding
+            && invocationBinding.Expression is Microsoft.CodeAnalysis.CSharp.Syntax.MemberBindingExpressionSyntax memberBinding
+            && memberBinding.Name.Identifier.Text == "Select")
+        {
+            return invocationBinding;
+        }
+
         // Direct Select invocation: s.Childs.Select(...)
         if (expression is InvocationExpressionSyntax invocation)
         {

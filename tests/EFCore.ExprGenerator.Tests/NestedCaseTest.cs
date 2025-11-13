@@ -68,7 +68,7 @@ public class NestedCaseTest
             {
                 s.Id,
                 s.Name,
-                // ChildDescription = s.Child?.Description,
+                ChildDescription = s.Child?.Description,
                 GrandChildDetails = s.Child?.GrandChild?.Details,
                 GreatGrandChildInfo = s.Child?.GrandChild?.GreatGrandChild?.Info,
                 Child2Summaries = s
@@ -86,7 +86,7 @@ public class NestedCaseTest
         var first = converted[0];
         first.Id.ShouldBe(1);
         first.Name.ShouldBe("Base1");
-        // first.ChildDescription.ShouldBe("Child1 of Base1");
+        first.ChildDescription.ShouldBe("Child1 of Base1");
         first.GrandChildDetails.ShouldBe("GrandChild1 of Child1 of Base1");
         first.GreatGrandChildInfo.ShouldBe("GreatGrandChild1 of GrandChild1 of Child1 of Base1");
         first.Child2Summaries.Count.ShouldBe(2);
@@ -108,7 +108,7 @@ public class NestedCaseTest
             {
                 s.Id,
                 s.Name,
-                // ChildDescription = s.Child?.Description,
+                ChildDescription = s.Child?.Description,
                 GrandChildDetails = s.Child?.GrandChild?.Details,
                 GreatGrandChildInfo = s.Child?.GrandChild?.GreatGrandChild?.Info,
                 Child2Summaries = s
@@ -126,7 +126,7 @@ public class NestedCaseTest
         var first = converted[0];
         first.Id.ShouldBe(1);
         first.Name.ShouldBe("Base1");
-        // first.ChildDescription.ShouldBe("Child1 of Base1");
+        first.ChildDescription.ShouldBe("Child1 of Base1");
         first.GrandChildDetails.ShouldBe("GrandChild1 of Child1 of Base1");
         first.GreatGrandChildInfo.ShouldBe("GreatGrandChild1 of GrandChild1 of Child1 of Base1");
         first.Child2Summaries.Count.ShouldBe(2);

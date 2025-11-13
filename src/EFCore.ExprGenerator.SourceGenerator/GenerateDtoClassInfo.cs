@@ -33,25 +33,37 @@ internal class GenerateDtoClassInfo
             if (prop.NestedStructure is not null)
             {
                 var nestStructure = prop.NestedStructure;
-                var containedNestClasses = NestedClasses.FirstOrDefault(nc =>
-                    nc.Structure == nestStructure
-                );
+
+                // Extract the base collection type (e.g., IEnumerable from IEnumerable<T>)
                 var baseType = propertyType;
                 if (propertyType.Contains("<"))
                 {
                     baseType = propertyType[..propertyType.IndexOf("<")];
                 }
+
+                // Try to find nested class info by full name match
+                var nestedClassName = $"{nestStructure.SourceTypeName}Dto_{nestStructure.GetUniqueId()}";
+                var containedNestClasses = NestedClasses.FirstOrDefault(nc =>
+                    nc.ClassName == nestedClassName
+                );
+
                 if (containedNestClasses is not null)
                 {
                     propertyType = $"{baseType}<{containedNestClasses.FullName}>";
                 }
                 else
                 {
-                    // Extract the base type (e.g., IEnumerable from IEnumerable<T>)
-                    var nestedDtoName = prop.NestedStructure.SourceTypeName;
-                    propertyType = $"{baseType}<{nestedDtoName}>";
+                    // Fallback: use generated class name directly
+                    propertyType = $"{baseType}<{Namespace}.{nestedClassName}>";
                 }
             }
+
+            // Add nullable annotation if the property is nullable
+            if (prop.IsNullable && !propertyType.EndsWith("?"))
+            {
+                propertyType = $"{propertyType}?";
+            }
+
             sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
         }
         sb.AppendLine("}");

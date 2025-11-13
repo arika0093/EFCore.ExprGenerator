@@ -123,6 +123,8 @@ internal abstract record SelectExprInfo
     {
         var spaces = new string(' ', indents);
         // Example: s.Childs.Select(c => new { ... }) or s.Childs.Select(c => new { ... }).ToList()
+        // Also handle: s.Childs?.Select(c => new { ... }) ?? []
+
         // Extract parameter name (e.g., "c")
         // Consider the possibility of whitespace or generic type parameters after .Select
         var selectIndex = expression.IndexOf(".Select");
@@ -139,6 +141,13 @@ internal abstract record SelectExprInfo
         if (string.IsNullOrEmpty(paramName))
             paramName = "x"; // Default parameter name
         var baseExpression = expression[..selectIndex];
+
+        // Check if there's a ?. before .Select and remove the ?
+        if (baseExpression.EndsWith("?"))
+        {
+            baseExpression = baseExpression[..^1];
+        }
+
         var nestedDtoName = GetClassName(nestedStructure);
 
         // Find the closing paren for Select(...) to detect any chained methods like .ToList()
@@ -158,7 +167,7 @@ internal abstract record SelectExprInfo
                 }
             }
         }
-        // Extract any chained method calls after Select(...) (e.g., ".ToList()")
+        // Extract any chained method calls after Select(...) (e.g., ".ToList()", " ?? []")
         var chainedMethods = selectEnd < expression.Length ? expression[selectEnd..] : "";
 
         var propertyAssignments = new List<string>();
@@ -168,12 +177,92 @@ internal abstract record SelectExprInfo
             propertyAssignments.Add($"{spaces}    {prop.Name} = {assignment},");
         }
         var propertiesCode = string.Join("\n", propertyAssignments);
-        var code = $$"""
-            {{baseExpression}}.Select({{paramName}} => new {{nestedDtoName}} {
-            {{propertiesCode}}
-            {{spaces}}}){{chainedMethods}}
-            """;
-        return code;
+
+        // Check if the base expression (before .Select) uses ?. (nullable access)
+        // Only check the part before .Select, not inside the lambda
+        var originalBaseExpression = expression[..selectIndex];
+        // Check if it contains ?. OR ends with ? (which means ?.Select)
+        var hasNullableAccess = originalBaseExpression.Contains("?.") || originalBaseExpression.EndsWith("?");
+        if (hasNullableAccess)
+        {
+            // Convert s.OrderItems?.Select(...) ?? [] to:
+            // s.OrderItems != null ? s.OrderItems.Select(...) : []
+
+            // Build null checks for all nullable parts
+            var checks = new List<string>();
+            var accessPath = baseExpression;  // baseExpression is already without the ?
+
+            // Check if originalBaseExpression ends with ? (from ?.)
+            if (originalBaseExpression.EndsWith("?"))
+            {
+                // Simple case: s.OrderItems?
+                checks.Add($"{baseExpression} != null");
+            }
+            else
+            {
+                // Complex case with nested ?.
+                var parts = originalBaseExpression.Split(["?."], StringSplitOptions.None);
+                if (parts.Length >= 2)
+                {
+                    var currentPath = parts[0];
+                    for (int i = 1; i < parts.Length; i++)
+                    {
+                        checks.Add($"{currentPath} != null");
+                        var nextPart = parts[i];
+                        var dotIndex = nextPart.IndexOf('.');
+                        var propertyName = dotIndex > 0 ? nextPart[..dotIndex] : nextPart;
+                        currentPath = $"{currentPath}.{propertyName}";
+                    }
+                }
+            }
+
+            var nullCheckPart = string.Join(" && ", checks);
+
+            // Extract the default value from chained methods (e.g., "?? []")
+            var defaultValue = "default";
+            if (chainedMethods.Contains("??"))
+            {
+                var coalesceIndex = chainedMethods.IndexOf("??");
+                var rawDefault = chainedMethods[(coalesceIndex + 2)..].Trim();
+                // Replace [] with appropriate default for expression trees
+                if (rawDefault == "[]")
+                {
+                    if (string.IsNullOrEmpty(nestedDtoName))
+                    {
+                        // For anonymous types, we cannot use Enumerable.Empty with anonymous type
+                        // Instead, we need to use Array.Empty or new[]{} but that also doesn't work
+                        // Best approach: use the Select expression itself to return the right type
+                        // We'll wrap the whole Select in a cast to ensure type safety
+                        defaultValue = "null";
+                    }
+                    else
+                    {
+                        defaultValue = "System.Linq.Enumerable.Empty<" + nestedDtoName + ">()";
+                    }
+                }
+                else
+                {
+                    defaultValue = rawDefault;
+                }
+                chainedMethods = chainedMethods[..coalesceIndex].Trim();
+            }
+
+            var code = $$"""
+                {{nullCheckPart}} ? {{accessPath}}.Select({{paramName}} => new {{nestedDtoName}} {
+                {{propertiesCode}}
+                {{spaces}}}){{chainedMethods}} : {{defaultValue}}
+                """;
+            return code;
+        }
+        else
+        {
+            var code = $$"""
+                {{baseExpression}}.Select({{paramName}} => new {{nestedDtoName}} {
+                {{propertiesCode}}
+                {{spaces}}}){{chainedMethods}}
+                """;
+            return code;
+        }
     }
 
     protected string ConvertNullableAccessToExplicitCheck(string expression, ITypeSymbol typeSymbol)
