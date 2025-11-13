@@ -9,12 +9,13 @@ namespace EFCore.ExprGenerator;
 /// <summary>
 /// DTO structure information
 /// </summary>
-internal record DtoStructure(
-    string SourceTypeName,
-    string SourceTypeFullName,
-    List<DtoProperty> Properties
-)
+internal record DtoStructure(ITypeSymbol SourceType, List<DtoProperty> Properties)
 {
+    public string SourceTypeName => SourceType.Name;
+
+    public string SourceTypeFullName =>
+        SourceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
     public string GetUniqueId()
     {
         // Generate hash from property structure
@@ -75,13 +76,7 @@ internal record DtoStructure(
                 properties.Add(property);
             }
         }
-        return new DtoStructure(
-            SourceTypeName: targetType.Name,
-            SourceTypeFullName: targetType.ToDisplayString(
-                SymbolDisplayFormat.FullyQualifiedFormat
-            ),
-            Properties: properties
-        );
+        return new DtoStructure(SourceType: targetType, Properties: properties);
     }
 
     public static DtoStructure? AnalyzeAnonymousType(
@@ -117,13 +112,7 @@ internal record DtoStructure(
                 properties.Add(property);
             }
         }
-        return new DtoStructure(
-            SourceTypeName: sourceType.Name,
-            SourceTypeFullName: sourceType.ToDisplayString(
-                SymbolDisplayFormat.FullyQualifiedFormat
-            ),
-            Properties: properties
-        );
+        return new DtoStructure(SourceType: targetType, Properties: properties);
     }
 
     private static string? GetImplicitPropertyName(ExpressionSyntax expression)
