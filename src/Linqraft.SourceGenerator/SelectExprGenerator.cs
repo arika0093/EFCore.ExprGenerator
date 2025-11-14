@@ -277,6 +277,15 @@ public partial class SelectExprGenerator : IIncrementalGenerator
 
         var explicitDtoName = tResultType.Name;
 
+        // Extract parent class names if the DTO type is nested
+        var parentClasses = new List<string>();
+        var currentContaining = tResultType.ContainingType;
+        while (currentContaining is not null)
+        {
+            parentClasses.Insert(0, currentContaining.Name);
+            currentContaining = currentContaining.ContainingType;
+        }
+
         // Get the namespace of the calling code
         var invocationSyntaxTree = invocation.SyntaxTree;
         var root = invocationSyntaxTree.GetRoot();
@@ -296,6 +305,8 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             TargetNamespace = targetNamespace,
             LambdaParameterName = lambdaParameterName,
             CallerNamespace = targetNamespace,
+            ParentClasses = parentClasses,
+            TResultType = tResultType,
         };
     }
 }

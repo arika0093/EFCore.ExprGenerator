@@ -18,6 +18,16 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     public required string ExplicitDtoName { get; init; }
     public required string TargetNamespace { get; init; }
 
+    /// <summary>
+    /// Parent class names in order from outermost to innermost (empty if DTO is not nested)
+    /// </summary>
+    public required List<string> ParentClasses { get; init; }
+
+    /// <summary>
+    /// The ITypeSymbol of the TResult type (for extracting accessibility)
+    /// </summary>
+    public required ITypeSymbol TResultType { get; init; }
+
     // Generate DTO classes (including nested DTOs)
     public override List<GenerateDtoClassInfo> GenerateDtoClasses()
     {
@@ -32,7 +42,8 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     )
     {
         var result = new List<GenerateDtoClassInfo>();
-        var accessibility = GetAccessibilityString(SourceType);
+        // Use TResultType's accessibility for explicit DTO
+        var accessibility = GetAccessibilityString(TResultType);
         var className = overrideClassName ?? GetClassName(structure);
 
         foreach (var prop in structure.Properties)
@@ -51,6 +62,7 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
             ClassName = className,
             Structure = structure,
             NestedClasses = [.. result],
+            ParentClasses = ParentClasses,
         };
         result.Add(dtoClassInfo);
         return result;
@@ -94,7 +106,12 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
     {
         var sourceTypeFullName = structure.SourceTypeFullName;
         var actualNamespace = GetActualDtoNamespace();
-        var dtoFullName = $"global::{actualNamespace}.{dtoName}";
+
+        // Build full DTO name with parent classes if nested
+        var dtoFullName = ParentClasses.Count > 0
+            ? $"global::{actualNamespace}.{string.Join(".", ParentClasses)}.{dtoName}"
+            : $"global::{actualNamespace}.{dtoName}";
+
         var returnTypePrefix = GetReturnTypePrefix();
         var sb = new StringBuilder();
 
