@@ -42,6 +42,24 @@ public class SimpleCaseTest
     }
 
     [Fact]
+    public void Case1AnotherParamName()
+    {
+        var converted = Case1Data
+            .AsQueryable()
+            .SelectExpr<Simple1, Case1OtherDto>(info => new
+            {
+                info.Id,
+                FullName = info.FirstName + " + " + info.LastName,
+            })
+            .ToList();
+        converted.Count.ShouldBe(2);
+        var first = converted[0];
+        first.GetType().Name.ShouldBe("Case1OtherDto");
+        first.Id.ShouldBe(1);
+        first.FullName.ShouldBe("John + Doe");
+    }
+
+    [Fact]
     public void Case1ManyLinqMethods()
     {
         var converted = Case1Data

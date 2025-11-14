@@ -49,7 +49,7 @@ internal record SelectExprInfoAnonymous : SelectExprInfo
         sb.AppendLine(
             $"    var matchedQuery = query as object as IQueryable<{sourceTypeFullName}>;"
         );
-        sb.AppendLine($"    var converted = matchedQuery.Select(s => new");
+        sb.AppendLine($"    var converted = matchedQuery.Select({LambdaParameterName} => new");
         sb.AppendLine($"    {{");
 
         // Generate property assignments

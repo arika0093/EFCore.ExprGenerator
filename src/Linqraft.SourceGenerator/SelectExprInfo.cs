@@ -16,6 +16,7 @@ internal abstract record SelectExprInfo
     public required ITypeSymbol SourceType { get; init; }
     public required SemanticModel SemanticModel { get; init; }
     public required InvocationExpressionSyntax Invocation { get; init; }
+    public required string LambdaParameterName { get; init; }
 
     // Generate DTO classes (including nested DTOs)
     public abstract List<GenerateDtoClassInfo> GenerateDtoClasses();

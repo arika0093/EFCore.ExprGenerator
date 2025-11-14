@@ -54,7 +54,7 @@ internal record SelectExprInfoNamed : SelectExprInfo
         sb.AppendLine(
             $"    var matchedQuery = query as object as IQueryable<{querySourceTypeFullName}>;"
         );
-        sb.AppendLine($"    var converted = matchedQuery.Select(s => {originalExpression});");
+        sb.AppendLine($"    var converted = matchedQuery.Select({LambdaParameterName} => {originalExpression});");
         sb.AppendLine($"    return converted as object as IQueryable<TResult>;");
         sb.AppendLine("}");
         return sb.ToString();

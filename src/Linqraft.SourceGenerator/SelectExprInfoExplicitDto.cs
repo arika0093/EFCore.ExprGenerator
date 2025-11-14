@@ -111,7 +111,7 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
         sb.AppendLine(
             $"    var matchedQuery = query as object as IQueryable<{sourceTypeFullName}>;"
         );
-        sb.AppendLine($"    var converted = matchedQuery.Select(s => new {dtoFullName}");
+        sb.AppendLine($"    var converted = matchedQuery.Select({LambdaParameterName} => new {dtoFullName}");
         sb.AppendLine($"    {{");
 
         // Generate property assignments

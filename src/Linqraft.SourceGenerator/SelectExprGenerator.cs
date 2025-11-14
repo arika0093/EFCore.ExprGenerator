@@ -118,6 +118,9 @@ public partial class SelectExprGenerator : IIncrementalGenerator
         if (lambdaArg is not LambdaExpressionSyntax lambda)
             return null;
 
+        // Extract lambda parameter name
+        var lambdaParamName = GetLambdaParameterName(lambda);
+
         // Check if this is a generic invocation with explicit type arguments
         // SelectExpr<TIn, TResult> form
         if (
@@ -129,7 +132,7 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             // This is the new SelectExpr<TIn, TResult> form
             if (lambda.Body is AnonymousObjectCreationExpressionSyntax anon)
             {
-                return GetExplicitDtoSelectExprInfo(context, anon, genericName);
+                return GetExplicitDtoSelectExprInfo(context, anon, genericName, lambdaParamName);
             }
         }
 
@@ -138,17 +141,29 @@ public partial class SelectExprGenerator : IIncrementalGenerator
         switch (body)
         {
             case AnonymousObjectCreationExpressionSyntax anon:
-                return GetAnonymousSelectExprInfo(context, anon);
+                return GetAnonymousSelectExprInfo(context, anon, lambdaParamName);
             case ObjectCreationExpressionSyntax objCreation:
-                return GetNamedSelectExprInfo(context, objCreation);
+                return GetNamedSelectExprInfo(context, objCreation, lambdaParamName);
             default:
                 return null;
         }
     }
 
+    private static string GetLambdaParameterName(LambdaExpressionSyntax lambda)
+    {
+        return lambda switch
+        {
+            SimpleLambdaExpressionSyntax simple => simple.Parameter.Identifier.Text,
+            ParenthesizedLambdaExpressionSyntax paren when paren.ParameterList.Parameters.Count > 0
+                => paren.ParameterList.Parameters[0].Identifier.Text,
+            _ => "s" // fallback to default
+        };
+    }
+
     private static SelectExprInfoAnonymous? GetAnonymousSelectExprInfo(
         GeneratorSyntaxContext context,
-        AnonymousObjectCreationExpressionSyntax anonymousObj
+        AnonymousObjectCreationExpressionSyntax anonymousObj,
+        string lambdaParameterName
     )
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
@@ -174,12 +189,14 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             AnonymousObject = anonymousObj,
             SemanticModel = semanticModel,
             Invocation = invocation,
+            LambdaParameterName = lambdaParameterName,
         };
     }
 
     private static SelectExprInfoNamed? GetNamedSelectExprInfo(
         GeneratorSyntaxContext context,
-        ObjectCreationExpressionSyntax obj
+        ObjectCreationExpressionSyntax obj,
+        string lambdaParameterName
     )
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
@@ -205,13 +222,15 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             ObjectCreation = obj,
             SemanticModel = semanticModel,
             Invocation = invocation,
+            LambdaParameterName = lambdaParameterName,
         };
     }
 
     private static SelectExprInfoExplicitDto? GetExplicitDtoSelectExprInfo(
         GeneratorSyntaxContext context,
         AnonymousObjectCreationExpressionSyntax anonymousObj,
-        GenericNameSyntax genericName
+        GenericNameSyntax genericName,
+        string lambdaParameterName
     )
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
@@ -260,6 +279,7 @@ public partial class SelectExprGenerator : IIncrementalGenerator
             Invocation = invocation,
             ExplicitDtoName = explicitDtoName,
             TargetNamespace = targetNamespace,
+            LambdaParameterName = lambdaParameterName,
         };
     }
 }
