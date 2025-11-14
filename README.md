@@ -252,9 +252,6 @@ public class OrderDto { /* ... */ }
 > If you want to use the auto-generated type information, you can navigate to the generated code (for example via F12 in your editor) by placing the cursor on the `OrderDto` class.
 > and then you can copy it or use it as you like.
 
-> [!NOTE]
-> Although the repository name contains "EFCore", the library has no runtime dependency on EF Core and can be used with any IQueryable provider that supports projection.
-
 ### Troubleshooting
 Sometimes, immediately building after changes may result in error `CS8072` (null-propagation operator cannot be used in expression tree lambdas).
 In such cases, rebuilding the project resolves the issue.
