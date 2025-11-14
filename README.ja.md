@@ -260,7 +260,7 @@ public class OrderDto { /* ... */ }
 ## パフォーマンス
 
 <details>
-<summary>Benchmark Environments</summary>
+<summary>ベンチマーク結果</summary>
 
 ```
 BenchmarkDotNet v0.15.7, Windows 11 (10.0.26200.7171/25H2/2025Update/HudsonValley2)
@@ -270,14 +270,14 @@ Intel Core i7-14700F 2.10GHz, 1 CPU, 28 logical and 20 physical cores
   DefaultJob : .NET 9.0.10 (9.0.10, 9.0.1025.47515), X64 RyuJIT x86-64-v3
 ```
 
-</details>
-
 | Method                        | Mean       | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0    | Gen1   | Allocated | Alloc Ratio |
 |------------------------------ |-----------:|---------:|---------:|------:|--------:|-----:|--------:|-------:|----------:|------------:|
 | 'Traditional Manual DTO'      |   962.2 us |  7.11 us |  6.65 us |  0.92 |    0.01 |    1 | 13.6719 | 1.9531 | 245.06 KB |        1.00 |
 | 'Linqraft Auto-Generated DTO' |   968.6 us |  7.40 us |  6.92 us |  0.92 |    0.01 |    1 | 13.6719 | 1.9531 | 245.09 KB |        1.00 |
 | 'Linqraft Anonymous'          | 1,030.7 us |  4.64 us |  4.34 us |  0.98 |    0.01 |    2 | 13.6719 | 1.9531 | 244.92 KB |        1.00 |
 | 'Traditional Anonymous'       | 1,047.7 us | 16.51 us | 15.44 us |  1.00 |    0.02 |    2 | 13.6719 | 1.9531 | 246.14 KB |        1.00 |
+
+</details>
 
 手動で定義した場合とLinqraftの性能はほぼ同等です。詳細については、[Linqraft.Benchmark](./examples/Linqraft.Benchmark)をご覧ください。
 
