@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Linqraft.Tests;
 
-public class PartialNestedDtoTest
+public partial class PartialNestedDtoTest
 {
     [Fact]
     public void PartialNestedDto_ShouldGenerateInSameNestingLevel()
@@ -73,6 +73,49 @@ public class PartialNestedDtoTest
         first.Id.ShouldBe(1);
         first.Name.ShouldBe("Entity1");
     }
+
+    [Fact]
+    public void PartialNestedDto_ShouldGenerateInSameClass()
+    {
+        var testData = new List<Entity>
+        {
+            new Entity
+            {
+                Id = 1,
+                Name = "Entity1",
+                CreatedAt = new System.DateTime(2025, 1, 1),
+            },
+            new Entity
+            {
+                Id = 2,
+                Name = "Entity2",
+                CreatedAt = new System.DateTime(2025, 1, 2),
+            },
+        };
+
+        var converted = testData
+            .AsQueryable()
+            .SelectExpr<Entity, EntityDtoInClass>(e => new
+            {
+                e.Id,
+                e.Name,
+                e.CreatedAt,
+            })
+            .ToList();
+
+        converted.Count.ShouldBe(2);
+        var first = converted[0];
+        first.Id.ShouldBe(1);
+        first.Name.ShouldBe("Entity1");
+        first.CreatedAt.ShouldBe(new System.DateTime(2025, 1, 1));
+
+        var second = converted[1];
+        second.Id.ShouldBe(2);
+        second.Name.ShouldBe("Entity2");
+        second.CreatedAt.ShouldBe(new System.DateTime(2025, 1, 2));
+    }
+
+    public partial class EntityDtoInClass;
 }
 
 internal class Entity
