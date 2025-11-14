@@ -62,8 +62,8 @@ class Program
 
         // Pattern 1: Traditional with Anonymous Type
         Console.WriteLine("1. Traditional with Anonymous Type...");
-        var result1 = await dbContext.SampleClasses
-            .Select(s => new
+        var result1 = await dbContext
+            .SampleClasses.Select(s => new
             {
                 s.Id,
                 s.Foo,
@@ -79,16 +79,20 @@ class Program
                 Child2Quux = s.Child2 != null ? s.Child2.Quux : null,
                 Child3Id = s.Child3.Id,
                 Child3Corge = s.Child3.Corge,
-                Child3ChildId = s.Child3 != null && s.Child3.Child != null ? (int?)s.Child3.Child.Id : null,
-                Child3ChildGrault = s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Grault : null,
+                Child3ChildId = s.Child3 != null && s.Child3.Child != null
+                    ? (int?)s.Child3.Child.Id
+                    : null,
+                Child3ChildGrault = s.Child3 != null && s.Child3.Child != null
+                    ? s.Child3.Child.Grault
+                    : null,
             })
             .ToListAsync();
         Console.WriteLine($"   ✓ Returned {result1.Count} results");
 
         // Pattern 2: Traditional with Manual DTO
         Console.WriteLine("2. Traditional with Manual DTO...");
-        var result2 = await dbContext.SampleClasses
-            .Select(s => new ManualSampleClassDto
+        var result2 = await dbContext
+            .SampleClasses.Select(s => new ManualSampleClassDto
             {
                 Id = s.Id,
                 Foo = s.Foo,
@@ -104,16 +108,18 @@ class Program
                 Child2Quux = s.Child2 != null ? s.Child2.Quux : null,
                 Child3Id = s.Child3.Id,
                 Child3Corge = s.Child3.Corge,
-                Child3ChildId = s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null,
-                Child3ChildGrault = s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Grault : null,
+                Child3ChildId =
+                    s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null,
+                Child3ChildGrault =
+                    s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Grault : null,
             })
             .ToListAsync();
         Console.WriteLine($"   ✓ Returned {result2.Count} results");
 
         // Pattern 3: Linqraft with Anonymous Type
         Console.WriteLine("3. Linqraft with Anonymous Type...");
-        var result3 = await dbContext.SampleClasses
-            .SelectExpr(s => new
+        var result3 = await dbContext
+            .SampleClasses.SelectExpr(s => new
             {
                 s.Id,
                 s.Foo,
@@ -137,8 +143,8 @@ class Program
 
         // Pattern 4: Linqraft with Auto-Generated DTO
         Console.WriteLine("4. Linqraft with Auto-Generated DTO...");
-        var result4 = await dbContext.SampleClasses
-            .SelectExpr<SampleClass, LinqraftSampleClassDto>(s => new
+        var result4 = await dbContext
+            .SampleClasses.SelectExpr<SampleClass, LinqraftSampleClassDto>(s => new
             {
                 s.Id,
                 s.Foo,
@@ -162,7 +168,7 @@ class Program
 
         // Cleanup
         await dbContext.Database.EnsureDeletedAsync();
-        
+
         Console.WriteLine("\n✅ All 4 patterns work correctly!");
         Console.WriteLine("\nRun without --test flag to execute benchmark:");
         Console.WriteLine("  dotnet run -c Release");
