@@ -17,13 +17,36 @@ internal class GenerateDtoClassInfo
 
     public required ImmutableList<GenerateDtoClassInfo> NestedClasses { get; set; }
 
-    public string FullName => $"{Namespace}.{ClassName}";
+    /// <summary>
+    /// Parent class names in order from outermost to innermost (empty if DTO is not nested)
+    /// </summary>
+    public List<string> ParentClasses { get; set; } = [];
+
+    public string FullName =>
+        ParentClasses.Count > 0
+            ? $"{Namespace}.{string.Join(".", ParentClasses)}.{ClassName}"
+            : $"{Namespace}.{ClassName}";
 
     public string BuildCode()
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"{Accessibility} partial class {ClassName}");
-        sb.AppendLine("{");
+
+        // Build nested parent classes if they exist
+        // Parent classes should always be public to match the partial class declaration
+        if (ParentClasses.Count > 0)
+        {
+            for (int i = 0; i < ParentClasses.Count; i++)
+            {
+                var indent = new string(' ', i * 4);
+                sb.AppendLine($"{indent}public partial class {ParentClasses[i]}");
+                sb.AppendLine($"{indent}{{");
+            }
+        }
+
+        // Build the actual DTO class
+        var classIndent = new string(' ', ParentClasses.Count * 4);
+        sb.AppendLine($"{classIndent}{Accessibility} partial class {ClassName}");
+        sb.AppendLine($"{classIndent}{{");
 
         foreach (var prop in Structure.Properties)
         {
@@ -65,9 +88,22 @@ internal class GenerateDtoClassInfo
                 propertyType = $"{propertyType}?";
             }
 
-            sb.AppendLine($"    public required {propertyType} {prop.Name} {{ get; set; }}");
+            sb.AppendLine(
+                $"{classIndent}    public required {propertyType} {prop.Name} {{ get; set; }}"
+            );
         }
-        sb.AppendLine("}");
+        sb.AppendLine($"{classIndent}}}");
+
+        // Close parent classes if they exist
+        if (ParentClasses.Count > 0)
+        {
+            for (int i = ParentClasses.Count - 1; i >= 0; i--)
+            {
+                var indent = new string(' ', i * 4);
+                sb.AppendLine($"{indent}}}");
+            }
+        }
+
         return sb.ToString();
     }
 }
