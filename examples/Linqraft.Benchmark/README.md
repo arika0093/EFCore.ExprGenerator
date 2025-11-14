@@ -14,13 +14,78 @@
    - DTOクラスは自動生成される
    - null条件演算子(`?.`)が使用可能で、簡潔なコード記述が可能
 
+### コード比較
+
+**従来の方法 (TraditionalSelect)**:
+```csharp
+// ❌ 冗長なnullチェックが必要
+var result = await dbContext.SampleClasses
+    .Select(s => new ManualSampleClassDto
+    {
+        Id = s.Id,
+        Foo = s.Foo,
+        Bar = s.Bar,
+        Childs = s.Childs.Select(c => new ManualSampleChildDto
+        {
+            Id = c.Id,
+            Baz = c.Baz,
+            ChildId = c.Child != null ? c.Child.Id : null,
+            ChildQux = c.Child != null ? c.Child.Qux : null,
+        }),
+        Child2Id = s.Child2 != null ? s.Child2.Id : null,
+        Child2Quux = s.Child2 != null ? s.Child2.Quux : null,
+        Child3ChildId = s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Id : null,
+        Child3ChildGrault = s.Child3 != null && s.Child3.Child != null ? s.Child3.Child.Grault : null,
+    })
+    .ToListAsync();
+
+// 手動でDTOクラスを定義する必要がある
+public class ManualSampleClassDto { /* ... */ }
+public class ManualSampleChildDto { /* ... */ }
+```
+
+**Linqraftを使用 (LinqraftSelectExpr)**:
+```csharp
+// ✅ null条件演算子が使用可能で簡潔
+var result = await dbContext.SampleClasses
+    .SelectExpr<SampleClass, LinqraftSampleClassDto>(s => new
+    {
+        s.Id,
+        s.Foo,
+        s.Bar,
+        Childs = s.Childs.Select(c => new
+        {
+            c.Id,
+            c.Baz,
+            ChildId = c.Child?.Id,      // ← null条件演算子
+            ChildQux = c.Child?.Qux,    // ← null条件演算子
+        }),
+        Child2Id = s.Child2?.Id,        // ← null条件演算子
+        Child2Quux = s.Child2?.Quux,    // ← null条件演算子
+        Child3ChildId = s.Child3?.Child?.Id,        // ← null条件演算子の連鎖
+        Child3ChildGrault = s.Child3?.Child?.Grault, // ← null条件演算子の連鎖
+    })
+    .ToListAsync();
+
+// DTOクラスは自動生成される - 定義不要！
+```
+
 ## 実行方法
 
 ### 前提条件
 - .NET 9.0 SDK以降
 
+### テスト実行（動作確認）
+
+まず、両方のメソッドが正しく動作することを確認:
+```bash
+cd examples/Linqraft.Benchmark
+dotnet run --test
+```
+
 ### ベンチマーク実行
 
+実際のパフォーマンス測定:
 ```bash
 cd examples/Linqraft.Benchmark
 dotnet run -c Release
@@ -47,3 +112,4 @@ BenchmarkDotNetは以下の情報を提供します:
 - さらにネストされた子クラス (SampleChildChildClass, SampleChildChildClass2)
 
 を含みます。
+
