@@ -12,6 +12,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <Authors>arika0093</Authors>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>linqraft.png</PackageIcon>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
@@ -26,5 +27,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="../../assets/linqraft.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
