@@ -1,5 +1,6 @@
 ﻿<Project>
   <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
