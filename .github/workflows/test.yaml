@@ -8,15 +8,12 @@ on:
       - '**.cs'
       - '**.yaml'
 
-env:
-  DOTNET_VERSION: |
-    6.0.x
-    8.0.x
-    10.0.x
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,7 +23,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: |
+            6.0.x
+            8.0.x
+            10.0.x
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
