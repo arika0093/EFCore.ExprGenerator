@@ -200,7 +200,8 @@ Install `Linqraft` from NuGet:
 dotnet add package Linqraft --prerelease
 ```
 
-### Examples
+## Examples
+### Anonymous pattern
 
 Use `SelectExpr` without generics to get an anonymous-type projection:
 
@@ -215,6 +216,7 @@ var orders = await dbContext.Orders
     .ToListAsync();
 ```
 
+### Explicit DTO pattern
 If you want to change the result to a DTO class, simply specify the generics as follows.
 
 ```csharp
@@ -240,6 +242,25 @@ public partial class OrderDto
 }
 ```
 
+Similarly, you can use only the auto-generation feature by specifying `IEnumerable` types.
+
+```csharp
+var orders = MySampleList
+    .SelectExpr<Order, OrderDto>(o => new
+    {
+        Id = o.Id,
+        CustomerName = o.Customer?.Name,
+        // ...
+    })
+    .ToList();
+```
+
+> [!TIP]
+> If you want to use the auto-generated type information, you can navigate to the generated code (for example via F12 in your editor) by placing the cursor on the `OrderDto` class.
+> and then you can copy it or use it as you like.
+
+
+### Pre-existing DTO pattern
 If you already have DTO classes and want to use them directly, call `SelectExpr` without generics and construct your DTO type in the selector:
 
 ```csharp
@@ -256,10 +277,6 @@ var orders = await dbContext.Orders
 public class OrderDto { /* ... */ }
 ```
 
-> [!TIP]
-> If you want to use the auto-generated type information, you can navigate to the generated code (for example via F12 in your editor) by placing the cursor on the `OrderDto` class.
-> and then you can copy it or use it as you like.
-
 ## Performance
 
 <details>
@@ -271,7 +288,6 @@ Intel Core i7-14700F 2.10GHz, 1 CPU, 28 logical and 20 physical cores
 .NET SDK 10.0.100-rc.2.25502.107
   [Host]     : .NET 9.0.10 (9.0.10, 9.0.1025.47515), X64 RyuJIT x86-64-v3
   DefaultJob : .NET 9.0.10 (9.0.10, 9.0.1025.47515), X64 RyuJIT x86-64-v3
-```
 
 | Method                        | Mean       | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0    | Gen1   | Allocated | Alloc Ratio |
 |------------------------------ |-----------:|---------:|---------:|------:|--------:|-----:|--------:|-------:|----------:|------------:|
@@ -279,6 +295,7 @@ Intel Core i7-14700F 2.10GHz, 1 CPU, 28 logical and 20 physical cores
 | 'Linqraft Auto-Generated DTO' |   968.6 us |  7.40 us |  6.92 us |  0.92 |    0.01 |    1 | 13.6719 | 1.9531 | 245.09 KB |        1.00 |
 | 'Linqraft Anonymous'          | 1,030.7 us |  4.64 us |  4.34 us |  0.98 |    0.01 |    2 | 13.6719 | 1.9531 | 244.92 KB |        1.00 |
 | 'Traditional Anonymous'       | 1,047.7 us | 16.51 us | 15.44 us |  1.00 |    0.02 |    2 | 13.6719 | 1.9531 | 246.14 KB |        1.00 |
+```
 
 </details>
 

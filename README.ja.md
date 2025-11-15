@@ -199,7 +199,8 @@ namespace Tutorial
 dotnet add package Linqraft --prerelease
 ```
 
-### 利用例
+## 利用例
+### Anonymous pattern
 `SelectExpr`をジェネリクス無しで使用すると、匿名型が返されます。
 
 ```csharp
@@ -213,6 +214,7 @@ var orders = await dbContext.Orders
     .ToListAsync();
 ```
 
+### Explicit DTO pattern
 結果をDTOクラスに変更したい場合は、以下のようにジェネリクスを指定するだけです。
 
 ```csharp
@@ -237,6 +239,25 @@ public partial class OrderDto
 }
 ```
 
+`IEnumerable`型についても同様に記述することで、DTO自動生成機能のみを利用することも可能です。
+
+```csharp
+var orders = MySampleList
+    .SelectExpr<Order, OrderDto>(o => new
+    {
+        Id = o.Id,
+        CustomerName = o.Customer?.Name,
+        // ...
+    })
+    .ToList();
+```
+
+
+> [!TIP]
+> 自動生成された型情報を利用したい場合、OrderDtoクラスにカーソルを合わせてF12キーを押すと、生成されたコードにジャンプします。
+> あとはコピーするなどして自由に利用できます。
+
+### Pre-existing DTO pattern
 自動生成機能を使用せず、既存のDTOクラスを利用することも可能です。この場合、ジェネリクス引数を指定せずに使用する必要があります。
 
 ```csharp
@@ -253,10 +274,6 @@ var orders = await dbContext.Orders
 public class OrderDto { /* ... */ }
 ```
 
-> [!TIP]
-> 自動生成された型情報を利用したい場合、OrderDtoクラスにカーソルを合わせてF12キーを押すと、生成されたコードにジャンプします。
-> あとはコピーするなどして自由に利用できます。
-
 ## パフォーマンス
 
 <details>
@@ -268,7 +285,6 @@ Intel Core i7-14700F 2.10GHz, 1 CPU, 28 logical and 20 physical cores
 .NET SDK 10.0.100-rc.2.25502.107
   [Host]     : .NET 9.0.10 (9.0.10, 9.0.1025.47515), X64 RyuJIT x86-64-v3
   DefaultJob : .NET 9.0.10 (9.0.10, 9.0.1025.47515), X64 RyuJIT x86-64-v3
-```
 
 | Method                        | Mean       | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0    | Gen1   | Allocated | Alloc Ratio |
 |------------------------------ |-----------:|---------:|---------:|------:|--------:|-----:|--------:|-------:|----------:|------------:|
@@ -276,6 +292,8 @@ Intel Core i7-14700F 2.10GHz, 1 CPU, 28 logical and 20 physical cores
 | 'Linqraft Auto-Generated DTO' |   968.6 us |  7.40 us |  6.92 us |  0.92 |    0.01 |    1 | 13.6719 | 1.9531 | 245.09 KB |        1.00 |
 | 'Linqraft Anonymous'          | 1,030.7 us |  4.64 us |  4.34 us |  0.98 |    0.01 |    2 | 13.6719 | 1.9531 | 244.92 KB |        1.00 |
 | 'Traditional Anonymous'       | 1,047.7 us | 16.51 us | 15.44 us |  1.00 |    0.02 |    2 | 13.6719 | 1.9531 | 246.14 KB |        1.00 |
+```
+
 
 </details>
 
