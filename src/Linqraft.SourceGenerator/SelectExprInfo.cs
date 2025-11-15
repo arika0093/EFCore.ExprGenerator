@@ -185,6 +185,19 @@ internal abstract record SelectExprInfo
         var (baseExpression, paramName, chainedMethods, hasNullableAccess, coalescingDefaultValue) =
             selectInfo.Value;
 
+        // Normalize baseExpression: remove unnecessary whitespace and newlines
+        baseExpression = System.Text.RegularExpressions.Regex.Replace(
+            baseExpression.Trim(),
+            @"\s+",
+            " "
+        );
+        // Remove spaces around dots (property access)
+        baseExpression = System.Text.RegularExpressions.Regex.Replace(
+            baseExpression,
+            @"\s*\.\s*",
+            "."
+        );
+
         // Generate property assignments for nested DTO
         var propertyAssignments = new List<string>();
         foreach (var prop in nestedStructure.Properties)
@@ -387,6 +400,19 @@ internal abstract record SelectExprInfo
         {
             baseExpression = baseExpression[..^1];
         }
+
+        // Normalize baseExpression: remove unnecessary whitespace and newlines
+        baseExpression = System.Text.RegularExpressions.Regex.Replace(
+            baseExpression.Trim(),
+            @"\s+",
+            " "
+        );
+        // Remove spaces around dots (property access)
+        baseExpression = System.Text.RegularExpressions.Regex.Replace(
+            baseExpression,
+            @"\s*\.\s*",
+            "."
+        );
 
         var nestedDtoName = GetClassName(nestedStructure);
 
