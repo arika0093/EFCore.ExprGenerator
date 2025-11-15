@@ -188,11 +188,13 @@ namespace Tutorial
 
 ## Usage
 ### Prerequisites
-This library uses [C# interceptors](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12#interceptors) internally, so use **C# 12 or later**.
+This library uses [C# interceptors](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12#interceptors) internally, so use **C# 12 or later**.  
 If you use .NET 7 or below, set the `LangVersion` property and use [Polysharp](https://github.com/Sergio0694/PolySharp/) to enable C# latest features.
 
+<details>
+<summary>.NET 7 or below setup</summary>
+
 ```xml
-<!-- Only for .NET 7 and earlier. Not required for .NET 8 and later. -->
 <Project>
     <PropertyGroup>
         <LangVersion>12.0</LangVersion>
@@ -202,6 +204,8 @@ If you use .NET 7 or below, set the `LangVersion` property and use [Polysharp](h
     </ItemGroup>
 </Project>
 ```
+
+</details>
 
 ### Installation
 
