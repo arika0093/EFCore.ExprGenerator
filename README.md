@@ -5,7 +5,7 @@
 
 Simplifies Select query expressions for EntityFrameworkCore (EF Core) by providing automatic DTO generation and support for null-propagating expressions.
 
-[English](./README.md) | [Japanese](./README.ja.md)
+[English](./README.md) | [Japanese](./docs/README.ja.md)
 
 ## Problem
 
@@ -130,6 +130,7 @@ for example, the generated code looks like this:
 #nullable enable
 #pragma warning disable IDE0060
 #pragma warning disable CS8601
+#pragma warning disable CS8602
 #pragma warning disable CS8603
 #pragma warning disable CS8604
 
