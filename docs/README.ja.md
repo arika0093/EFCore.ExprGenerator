@@ -4,7 +4,7 @@
 
 EntityFrameworkCore(EFCore)におけるSelectクエリの記述を簡潔にし、DTOクラスの自動生成・nullable式のサポートを提供します。
 
-[English](./README.md) | [Japanese](./README.ja.md)
+[English](../README.md) | [Japanese](./README.ja.md)
 
 ## 課題
 EFCoreにおいて、関連テーブルが大量にあるテーブルのデータを取得する例を考えます。

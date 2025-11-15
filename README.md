@@ -5,7 +5,7 @@
 
 Simplifies Select query expressions for EntityFrameworkCore (EF Core) by providing automatic DTO generation and support for null-propagating expressions.
 
-[English](./README.md) | [Japanese](./README.ja.md)
+[English](./README.md) | [Japanese](./docs/README.ja.md)
 
 ## Problem
 
