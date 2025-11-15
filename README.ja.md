@@ -188,6 +188,8 @@ namespace Tutorial
 
 </details>
 
+もしあなたがTypescriptのORMである[Prisma](https://www.prisma.io/)に慣れているなら、まさにあのような書き心地で使用することができます。すなわち、書いた通りに結果が生成されるスクリプト言語のような感覚で使用でき、DTOクラスの自動生成により型安全に利用可能で、他の場所でも再利用できます。
+
 ## 使用方法
 ### 前提
 このライブラリは内部的に [C# interceptors](https://learn.microsoft.com/ja-jp/dotnet/csharp/whats-new/csharp-12#interceptors) を使用しているため、**C# 12以降**を使用する必要があります。  

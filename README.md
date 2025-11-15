@@ -186,6 +186,8 @@ namespace Tutorial
 
 </details>
 
+If you are familiar with the TypeScript ORM [Prisma](https://www.prisma.io/), you can use it in exactly the same way. In other words, you can use it like a scripting language where the result is generated as you write it, and with automatic generation of DTO classes, you can use it safely in other places as well.
+
 ## Usage
 ### Prerequisites
 This library uses [C# interceptors](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12#interceptors) internally, so use **C# 12 or later**.  
