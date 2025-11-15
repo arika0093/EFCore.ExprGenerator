@@ -214,7 +214,7 @@ namespace Tutorial
 `Linqraft`をNuGetからインストールします。
 
 ```bash
-dotnet add package Linqraft --prerelease
+dotnet add package Linqraft
 ```
 
 ## 利用例

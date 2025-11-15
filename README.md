@@ -213,7 +213,7 @@ Set the `LangVersion` property and use [Polysharp](https://github.com/Sergio0694
 Install `Linqraft` from NuGet:
 
 ```bash
-dotnet add package Linqraft --prerelease
+dotnet add package Linqraft
 ```
 
 ## Examples
