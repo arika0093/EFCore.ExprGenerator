@@ -43,6 +43,12 @@ internal record DtoStructure(ITypeSymbol SourceType, List<DtoProperty> Propertie
         // If we can't determine the return type, fall back to source type
         var targetType = returnType ?? sourceType;
 
+        // Get properties from the target DTO type for nullable information
+        var targetProperties = targetType
+            .GetMembers()
+            .OfType<IPropertySymbol>()
+            .ToDictionary(p => p.Name, p => p);
+
         var properties = new List<DtoProperty>();
         foreach (var arg in namedObj.ArgumentList?.Arguments ?? [])
         {
@@ -57,7 +63,13 @@ internal record DtoStructure(ITypeSymbol SourceType, List<DtoProperty> Propertie
                 continue; // Skip if no name is provided
             }
             var expression = arg.Expression;
-            var property = DtoProperty.AnalyzeExpression(propertyName, expression, semanticModel);
+            targetProperties.TryGetValue(propertyName, out var targetProp);
+            var property = DtoProperty.AnalyzeExpression(
+                propertyName,
+                expression,
+                semanticModel,
+                targetProp
+            );
             if (property is not null)
             {
                 properties.Add(property);
@@ -70,7 +82,13 @@ internal record DtoStructure(ITypeSymbol SourceType, List<DtoProperty> Propertie
             // Get property name from left side of assignment
             string propertyName = init.Left.ToString();
             var expression = init.Right;
-            var property = DtoProperty.AnalyzeExpression(propertyName, expression, semanticModel);
+            targetProperties.TryGetValue(propertyName, out var targetProp);
+            var property = DtoProperty.AnalyzeExpression(
+                propertyName,
+                expression,
+                semanticModel,
+                targetProp
+            );
             if (property is not null)
             {
                 properties.Add(property);
