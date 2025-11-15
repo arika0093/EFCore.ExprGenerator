@@ -318,12 +318,6 @@ Intel Core i7-14700F 2.10GHz, 1 CPU, 28 logical and 20 physical cores
 Compared to the manual approach, the performance is nearly identical.
 for more details, see [Linqraft.Benchmark](./examples/Linqraft.Benchmark) for details.
 
-## Troubleshooting
-### CS8072 Error
-Sometimes, immediately building after changes may result in error `CS8072` (null-propagation operator cannot be used in expression tree lambdas).
-In such cases, rebuilding the project resolves the issue.
-If the issue persists, it may be due to null-propagation operators being incorrectly included in the generated source code. In that case, please feel free to open an issue!
-
 ## Notes
 The translation of anonymous-type selectors into Select-compatible expressions is done by source generation and some heuristics. Very complex expressions or certain C# constructs may not be supported. If you encounter unsupported cases, please open an issue with a minimal repro.
 

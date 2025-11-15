@@ -19,7 +19,8 @@ internal record DtoProperty(
     public static DtoProperty? AnalyzeExpression(
         string propertyName,
         ExpressionSyntax expression,
-        SemanticModel semanticModel
+        SemanticModel semanticModel,
+        IPropertySymbol? targetProperty = null
     )
     {
         var typeInfo = semanticModel.GetTypeInfo(expression);
@@ -27,10 +28,32 @@ internal record DtoProperty(
             return null;
 
         var propertyType = typeInfo.Type;
-        var isNullable = propertyType.NullableAnnotation == NullableAnnotation.Annotated;
+
+        // If targetProperty is provided (for predefined DTOs), use its type information
+        NullableAnnotation nullableAnnotation;
+        if (targetProperty is not null)
+        {
+            nullableAnnotation = targetProperty.Type.NullableAnnotation;
+            propertyType = targetProperty.Type;
+        }
+        else
+        {
+            nullableAnnotation = propertyType.NullableAnnotation;
+        }
+
+        var isNullable = nullableAnnotation == NullableAnnotation.Annotated;
 
         // Check if nullable operator ?. is used
         var hasNullableAccess = HasNullableAccess(expression);
+
+        // Syntax-based nullable detection (fallback for Visual Studio issues)
+        // If Roslyn returns None (unreliable in VS), use syntax-based heuristics
+        var shouldGenerateNullCheck = ShouldGenerateNullCheckFromSyntax(expression);
+        if (nullableAnnotation == NullableAnnotation.None && shouldGenerateNullCheck)
+        {
+            // Override: treat as nullable based on syntax
+            isNullable = true;
+        }
 
         // Detect nested Select (e.g., s.Childs.Select(...) or s.Childs.Select(...).ToList())
         DtoStructure? nestedStructure = null;
@@ -90,6 +113,52 @@ internal record DtoProperty(
             TypeSymbol: propertyType,
             NestedStructure: nestedStructure
         );
+    }
+
+    /// <summary>
+    /// Syntax-based heuristic to determine if null check should be generated.
+    /// This is a fallback for when Roslyn's NullableAnnotation is unreliable (e.g., in Visual Studio).
+    /// see https://github.com/arika0093/Linqraft/issues/22
+    /// </summary>
+    private static bool ShouldGenerateNullCheckFromSyntax(ExpressionSyntax expression)
+    {
+        // 1. If ?. is used, definitely needs null check
+        if (expression.DescendantNodesAndSelf().OfType<ConditionalAccessExpressionSyntax>().Any())
+        {
+            return true;
+        }
+
+        // 2. Check for nested member access (e.g., x.Child.Name)
+        // Count member access depth (excluding lambda parameters)
+        var memberAccesses = expression
+            .DescendantNodesAndSelf()
+            .OfType<MemberAccessExpressionSyntax>()
+            .Where(ma =>
+            {
+                // Exclude nested Select lambdas
+                var parentLambda = ma.Ancestors().OfType<LambdaExpressionSyntax>().FirstOrDefault();
+                var topLambda = expression
+                    .Ancestors()
+                    .OfType<LambdaExpressionSyntax>()
+                    .FirstOrDefault();
+                return parentLambda == topLambda;
+            })
+            .ToList();
+
+        // If there are multiple levels of member access (e.g., s.Child.Name has 2 levels)
+        // generate null check for safety
+        if (memberAccesses.Count >= 2)
+        {
+            // Check if the chain starts from a lambda parameter
+            var firstAccess = memberAccesses.FirstOrDefault();
+            if (firstAccess?.Expression is IdentifierNameSyntax)
+            {
+                // s.Child.Name - has intermediate navigation, needs null check
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool HasNullableAccess(ExpressionSyntax expression)
