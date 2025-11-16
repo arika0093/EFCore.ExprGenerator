@@ -22,6 +22,12 @@ internal class GenerateDtoClassInfo
     /// </summary>
     public List<string> ParentClasses { get; set; } = [];
 
+    /// <summary>
+    /// Parent class accessibilities in order from outermost to innermost (empty if DTO is not nested)
+    /// Must have the same length as ParentClasses
+    /// </summary>
+    public List<string> ParentAccessibilities { get; set; } = [];
+
     public string FullName =>
         ParentClasses.Count > 0
             ? $"{Namespace}.{string.Join(".", ParentClasses)}.{ClassName}"
@@ -32,13 +38,16 @@ internal class GenerateDtoClassInfo
         var sb = new StringBuilder();
 
         // Build nested parent classes if they exist
-        // Parent classes should always be public to match the partial class declaration
         if (ParentClasses.Count > 0)
         {
             for (int i = 0; i < ParentClasses.Count; i++)
             {
                 var indent = new string(' ', i * 4);
-                sb.AppendLine($"{indent}public partial class {ParentClasses[i]}");
+                // Use the parent class accessibility if available, otherwise default to public
+                var parentAccessibility = i < ParentAccessibilities.Count
+                    ? ParentAccessibilities[i]
+                    : "public";
+                sb.AppendLine($"{indent}{parentAccessibility} partial class {ParentClasses[i]}");
                 sb.AppendLine($"{indent}{{");
             }
         }

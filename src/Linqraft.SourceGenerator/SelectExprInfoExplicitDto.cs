@@ -38,20 +38,33 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
 
     private List<GenerateDtoClassInfo> GenerateDtoClasses(
         DtoStructure structure,
-        string? overrideClassName = null
+        string? overrideClassName = null,
+        List<string>? nestedParentClasses = null,
+        List<string>? nestedParentAccessibilities = null
     )
     {
         var result = new List<GenerateDtoClassInfo>();
-        // Explicit DTOs should always be public since the user explicitly specifies the type name
-        var accessibility = "public";
+        // Extract the actual accessibility from TResultType
+        var accessibility = GetAccessibilityString(TResultType);
         var className = overrideClassName ?? GetClassName(structure);
 
+        // Determine parent classes for nested DTOs
+        var currentParentClasses = nestedParentClasses ?? ParentClasses;
+        var currentParentAccessibilities = nestedParentAccessibilities ?? GetParentAccessibilities();
+
+        // Nested DTOs are placed at the same level as the current DTO, not inside it
+        // So they share the same parent classes
         foreach (var prop in structure.Properties)
         {
             if (prop.NestedStructure is not null)
             {
-                // Recursively generate nested DTO classes
-                result.AddRange(GenerateDtoClasses(prop.NestedStructure));
+                // Recursively generate nested DTO classes with the same parent info
+                result.AddRange(GenerateDtoClasses(
+                    prop.NestedStructure,
+                    overrideClassName: null,
+                    nestedParentClasses: currentParentClasses,
+                    nestedParentAccessibilities: currentParentAccessibilities
+                ));
             }
         }
         // Generate current DTO class
@@ -64,10 +77,27 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
             ClassName = className,
             Structure = structure,
             NestedClasses = [.. result],
-            ParentClasses = ParentClasses,
+            ParentClasses = currentParentClasses,
+            ParentAccessibilities = currentParentAccessibilities,
         };
         result.Add(dtoClassInfo);
         return result;
+    }
+
+    // Get parent class accessibilities from TResultType
+    private List<string> GetParentAccessibilities()
+    {
+        var accessibilities = new List<string>();
+        var currentType = TResultType.ContainingType;
+
+        // Traverse up the containing types to get all parent accessibilities
+        while (currentType != null)
+        {
+            accessibilities.Insert(0, GetAccessibilityString(currentType));
+            currentType = currentType.ContainingType;
+        }
+
+        return accessibilities;
     }
 
     // Generate DTO structure for unique ID generation
@@ -85,6 +115,18 @@ internal record SelectExprInfoExplicitDto : SelectExprInfo
 
     // Get the namespace where DTOs will be placed
     protected override string GetDtoNamespace() => GetActualDtoNamespace();
+
+    // Get the full name for a nested DTO class (including parent classes)
+    protected override string GetNestedDtoFullName(string nestedClassName)
+    {
+        var actualNamespace = GetActualDtoNamespace();
+        // Nested DTOs are placed within the same parent classes as the main DTO
+        if (ParentClasses.Count > 0)
+        {
+            return $"global::{actualNamespace}.{string.Join(".", ParentClasses)}.{nestedClassName}";
+        }
+        return $"global::{actualNamespace}.{nestedClassName}";
+    }
 
     // Get the actual namespace where the DTO will be placed
     // This mirrors the logic in SelectExprGroups.TargetNamespace getter
