@@ -3,7 +3,4 @@
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>.generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Linqraft\Linqraft.csproj" />
-  </ItemGroup>
 </Project>
