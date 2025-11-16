@@ -192,17 +192,17 @@ In other words, you can use it like a scripting language where the result is gen
 
 ## Usage
 ### Prerequisites
-This library uses [C# interceptors](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12#interceptors) internally, so use **C# 12 or later**.  
+This library uses [C# interceptors](https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/csharp-12#interceptors) internally, so use **C# 13 or later**.  
 
 <details>
-<summary>.NET 7 or below setup</summary>
+<summary>.NET 8 or below setup</summary>
 
 Set the `LangVersion` property and use [Polysharp](https://github.com/Sergio0694/PolySharp/) to enable C# latest features.
 
 ```xml
 <Project>
     <PropertyGroup>
-        <LangVersion>12.0</LangVersion>
+        <LangVersion>13.0</LangVersion>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Polysharp" Version="1.*" />
