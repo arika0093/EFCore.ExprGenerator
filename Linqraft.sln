@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.3.11206.111 d18.3
+VisualStudioVersion = 18.3.11206.111
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqraft", "src\Linqraft\Linqraft.csproj", "{F268E64E-83E8-429F-A8AB-1B6141E40B09}"
 EndProject
@@ -29,6 +29,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqraft.Benchmark", "examples\Linqraft.Benchmark\Linqraft.Benchmark.csproj", "{52BE16D9-5119-4C2D-97E6-A22E5ECF3A65}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqraft.ApiSample", "examples\Linqraft.ApiSample\Linqraft.ApiSample.csproj", "{563540A6-A57A-4EAC-959E-C1C8C15F0141}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Linqraft.MinimumSample", "examples\Linqraft.MinimumSample\Linqraft.MinimumSample.csproj", "{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -112,6 +114,18 @@ Global
 		{563540A6-A57A-4EAC-959E-C1C8C15F0141}.Release|x64.Build.0 = Release|Any CPU
 		{563540A6-A57A-4EAC-959E-C1C8C15F0141}.Release|x86.ActiveCfg = Release|Any CPU
 		{563540A6-A57A-4EAC-959E-C1C8C15F0141}.Release|x86.Build.0 = Release|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Debug|x64.Build.0 = Debug|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Debug|x86.Build.0 = Debug|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Release|x64.ActiveCfg = Release|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Release|x64.Build.0 = Release|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Release|x86.ActiveCfg = Release|Any CPU
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -123,6 +137,7 @@ Global
 		{53B95D83-A669-4479-AAE5-A461EE7ADAA9} = {1D587995-D2B1-D47C-23B4-E8E972FA15E9}
 		{52BE16D9-5119-4C2D-97E6-A22E5ECF3A65} = {1D587995-D2B1-D47C-23B4-E8E972FA15E9}
 		{563540A6-A57A-4EAC-959E-C1C8C15F0141} = {1D587995-D2B1-D47C-23B4-E8E972FA15E9}
+		{E3828BF2-4D20-4F79-BBC2-D8BB34691EAA} = {1D587995-D2B1-D47C-23B4-E8E972FA15E9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E5A2458A-7AD0-4B55-B0CD-E29FEE74A3A9}
